@@ -1,0 +1,772 @@
+# OWASP Dependency-Check 核心模块原理分析手册
+
+## 版本信息
+- **版本**：V1.0
+- **编写日期**：2026年5月27日
+- **基于版本**：Dependency-Check 12.0.2-SNAPSHOT
+- **作者**：实习项目组
+
+---
+
+## 目录
+
+1. [概述](#1-概述)
+2. [整体架构](#2-整体架构)
+3. [核心引擎 Engine](#3-核心引擎-engine)
+4. [分析器体系](#4-分析器体系)
+5. [分析阶段详解](#5-分析阶段详解)
+6. [报告生成机制](#6-报告生成机制)
+7. [核心分析器详解](#7-核心分析器详解)
+8. [数据流与依赖管理](#8-数据流与依赖管理)
+9. [扩展机制](#9-扩展机制)
+10. [常见问题与最佳实践](#10-常见问题与最佳实践)
+
+---
+
+## 1. 概述
+
+### 1.1 什么是 OWASP Dependency-Check
+
+OWASP Dependency-Check 是一个开源的安全工具，用于识别项目依赖中已知的公开漏洞（CVE）。它通过分析项目依赖的 JAR 包、配置文件等信息，提取依赖的标识信息（如 CPE、PURL），然后与 NVD（National Vulnerability Database）等漏洞数据库进行匹配，从而发现存在已知漏洞的依赖。
+
+### 1.2 核心功能
+
+- **依赖识别**：自动识别项目中的第三方依赖
+- **漏洞匹配**：将依赖与已知漏洞数据库进行匹配
+- **报告生成**：生成多种格式的安全报告（HTML、JSON、XML、CSV、SARIF 等）
+- **许可证分析**：识别依赖的许可证信息
+- **持续集成**：支持 Maven 插件、Gradle 插件、Jenkins 集成
+
+### 1.3 技术栈
+
+| 组件 | 技术 |
+|------|------|
+| 编程语言 | Java 11+ |
+| 构建工具 | Maven |
+| 数据库 | H2（嵌入式）、支持 MariaDB、MySQL、PostgreSQL、Oracle、MS SQL Server |
+| 模板引擎 | Apache Velocity |
+| 依赖注入 | SPI（Service Provider Interface） |
+| 漏洞数据源 | NVD、Sonatype OSS Index、RetireJS、Node Audit 等 |
+
+---
+
+## 2. 整体架构
+
+### 2.1 架构概览
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          CLI / Maven Plugin                         │
+│                     （入口层：命令行或构建工具集成）                      │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Engine（核心引擎）                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
+│  │ 初始化与加载   │  │  扫描依赖     │  │  分析依赖（多阶段）        │  │
+│  │ loadAnalyzers │→│  scan()      │→│  analyzeDependencies()   │  │
+│  └──────────────┘  └──────────────┘  └───────────┬──────────────┘  │
+└───────────────────────────────────────────────────┼──────────────────┘
+                                                    │
+                           ┌────────────────────────┼────────────────────────┐
+                           │                        │                        │
+                           ▼                        ▼                        ▼
+              ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
+              │   Analyzer 分析器    │  │   UpdateService     │  │   ReportGenerator   │
+              │  （50+ 个分析器）     │  │  （数据更新服务）      │  │  （报告生成器）       │
+              └─────────────────────┘  └─────────────────────┘  └─────────────────────┘
+```
+
+### 2.2 模块结构
+
+```
+dependency-check/
+├── core/          # 核心库：Engine、Analyzer、ReportGenerator、数据访问
+├── cli/           # 命令行接口
+├── maven/         # Maven 插件
+├── ant/           # Ant 集成
+├── archetype/     # Maven 原型
+└── utils/         # 工具类
+```
+
+### 2.3 核心包结构
+
+```
+org.owasp.dependencycheck
+├── Engine.java                    # 核心引擎
+├── AnalysisTask.java              # 分析任务（Callable）
+├── analyzer/                      # 分析器体系
+│   ├── Analyzer.java              # 分析器接口
+│   ├── AnalysisPhase.java         # 分析阶段枚举
+│   ├── AnalyzerService.java       # 分析器服务加载器（SPI）
+│   ├── AbstractAnalyzer.java      # 抽象分析器基类
+│   ├── AbstractFileTypeAnalyzer.java # 文件类型分析器基类
+│   ├── JarAnalyzer.java           # JAR 分析器
+│   ├── CPEAnalyzer.java           # CPE 匹配分析器
+│   ├── CentralAnalyzer.java       # Maven Central 分析器
+│   ├── NvdCveAnalyzer.java        # NVD CVE 分析器
+│   ├── OssIndexAnalyzer.java      # Sonatype OSS Index 分析器
+│   └── ... (50+ 个分析器)
+├── dependency/                    # 依赖模型
+│   ├── Dependency.java            # 依赖对象
+│   └── naming/                    # 标识符（CPE、PURL 等）
+├── reporting/                     # 报告生成
+│   ├── ReportGenerator.java       # 报告生成器
+│   └── templates/                 # Velocity 模板
+├── data/                          # 数据访问层
+└── utils/                         # 工具类
+```
+
+---
+
+## 3. 核心引擎 Engine
+
+### 3.1 Engine 类概述
+
+`Engine.java`（1365 行）是整个 Dependency-Check 的核心入口，实现了 `FileFilter` 和 `AutoCloseable` 接口。它负责：
+
+1. **初始化**：加载所有分析器、配置数据库
+2. **扫描**：扫描文件系统，识别依赖
+3. **分析**：按阶段执行所有分析器
+4. **报告**：生成分析报告
+
+### 3.2 初始化流程
+
+```
+Engine 构造函数
+  └── initializeEngine()
+       ├── 创建 Settings 对象（加载配置）
+       ├── 创建 AnalyzerService（SPI 加载器）
+       └── loadAnalyzers()
+            ├── 获取所有 Analyzer 实例
+            ├── 按 AnalysisPhase 分组存入 EnumMap<AnalysisPhase, List<Analyzer>>
+            └── 将 FileTypeAnalyzer 单独存入 Set<FileTypeAnalyzer>
+```
+
+**关键代码**（Engine.java）：
+
+```java
+protected final void initializeEngine() {
+    // ... 初始化设置
+    final AnalyzerService analyzerService = new AnalyzerService(serviceClassLoader, settings);
+    loadAnalyzers(analyzerService);
+}
+
+private void loadAnalyzers(AnalyzerService analyzerService) {
+    // 按阶段加载分析器
+    for (AnalysisPhase phase : mode.getPhases()) {
+        final List<Analyzer> phaseAnalyzers = analyzerService.getAnalyzers(phase);
+        analyzers.put(phase, phaseAnalyzers);
+    }
+    // 单独加载 FileTypeAnalyzer
+    for (Analyzer a : analyzerService.getAnalyzers()) {
+        if (FileTypeAnalyzer.class.isAssignableFrom(a.getClass())) {
+            fileTypeAnalyzers.add((FileTypeAnalyzer) a);
+        }
+    }
+}
+```
+
+### 3.3 扫描流程
+
+```
+scan(path)
+  └── scan(file)
+       ├── 如果是目录 → scanDirectory()
+       │    ├── 递归遍历目录下所有文件
+       │    └── 对每个文件调用 scanFile()
+       └── 如果是文件 → scanFile()
+            ├── 检查文件是否被接受（accept() 方法）
+            │    ├── 遍历所有 FileTypeAnalyzer
+            │    └── 只要有一个接受该文件即可
+            ├── 创建 Dependency 对象
+            │    ├── 设置文件路径、文件名
+            │    ├── 计算 SHA1 哈希
+            │    └── 设置文件扩展名
+            ├── 检查是否已存在相同依赖（SHA1 去重）
+            └── 添加到 dependencies 列表
+```
+
+**关键设计**：
+- **延迟扫描**：`scan()` 只负责发现依赖文件并创建 `Dependency` 对象，不执行分析
+- **SHA1 去重**：通过计算文件的 SHA1 哈希值，避免重复添加相同的依赖
+- **FileTypeAnalyzer 过滤**：只有被至少一个 `FileTypeAnalyzer` 接受的文件才会被扫描
+
+### 3.4 分析流程
+
+```
+analyzeDependencies()
+  ├── initializeAndUpdateDatabase()
+  │    ├── 检查是否需要数据库
+  │    ├── 如果 autoUpdate=true → doUpdates() 更新 NVD 数据库
+  │    └── 如果 autoUpdate=false → 打开已有数据库
+  ├── ensureDataExists() → 确保数据存在
+  ├── 遍历所有 AnalysisPhase
+  │    └── 遍历每个阶段的 Analyzer
+  │         ├── initializeAnalyzer() → 初始化分析器
+  │         │    └── analyzer.prepare(this)
+  │         ├── 如果分析器已启用 → executeAnalysisTasks()
+  │         │    ├── getAnalysisTasks() → 为每个依赖创建 AnalysisTask
+  │         │    ├── getExecutorService() → 获取线程池
+  │         │    │    ├── 支持并行 → newFixedThreadPool(maxThreads)
+  │         │    │    └── 不支持并行 → newSingleThreadExecutor()
+  │         │    └── invokeAll() → 并行/串行执行
+  │         └── closeAnalyzer() → 关闭分析器
+  └── 抛出 ExceptionCollection（如果有异常）
+```
+
+**关键设计**：
+- **多阶段流水线**：15 个分析阶段按顺序执行，每个阶段内的分析器可以并行
+- **并行处理**：支持并行处理的分析器使用多线程，不支持的使用单线程
+- **超时控制**：每个分析器有超时时间（默认 180 分钟）
+- **异常收集**：非致命异常会被收集到 `ExceptionCollection` 中，不会中断整个分析
+
+### 3.5 Engine 模式
+
+Engine 支持多种运行模式，不同模式使用不同的分析阶段集合：
+
+```java
+public enum Mode {
+    STANDALONE,     // 独立模式：使用所有阶段
+    EVIDENCE_COLLECTION,  // 仅证据收集
+    EVIDENCE_PROCESSING,  // 证据处理
+    ...
+}
+```
+
+---
+
+## 4. 分析器体系
+
+### 4.1 分析器接口
+
+所有分析器都实现 `Analyzer` 接口：
+
+```java
+public interface Analyzer {
+    String getName();                    // 分析器名称
+    AnalysisPhase getAnalysisPhase();    // 所属分析阶段
+    void prepare(Engine engine) throws InitializationException;  // 初始化
+    void analyzeDependency(Dependency dependency, Engine engine) throws AnalysisException;  // 分析依赖
+    void close() throws Exception;       // 关闭资源
+    boolean isEnabled();                 // 是否启用
+    boolean supportsParallelProcessing(); // 是否支持并行处理
+}
+```
+
+### 4.2 分析器继承体系
+
+```
+Analyzer（接口）
+├── AbstractAnalyzer（抽象基类）
+│   ├── AbstractFileTypeAnalyzer（文件类型分析器基类）
+│   │   ├── JarAnalyzer          # JAR/WAR/AAR 分析
+│   │   ├── FileNameAnalyzer     # 文件名分析
+│   │   ├── AssemblyAnalyzer     # .NET 程序集分析
+│   │   ├── AutoconfAnalyzer     # Autoconf 分析
+│   │   ├── CMakeAnalyzer        # CMake 分析
+│   │   ├── CocoaPodsAnalyzer    # CocoaPods 分析
+│   │   ├── ComposerLockAnalyzer # PHP Composer 分析
+│   │   ├── DartAnalyzer         # Dart 分析
+│   │   ├── GolangDepAnalyzer    # Go dep 分析
+│   │   ├── GolangModAnalyzer    # Go mod 分析
+│   │   ├── NodePackageAnalyzer  # Node.js 分析
+│   │   ├── NugetconfAnalyzer    # NuGet 分析
+│   │   ├── PipAnalyzer          # Python pip 分析
+│   │   ├── PythonDistributionAnalyzer # Python 发行版分析
+│   │   ├── RubyGemspecAnalyzer  # Ruby gemspec 分析
+│   │   └── ... (30+ 个文件类型分析器)
+│   ├── AbstractDependencyComparingAnalyzer
+│   │   ├── DependencyMergingAnalyzer    # 依赖合并
+│   │   └── VersionFilterAnalyzer        # 版本过滤
+│   ├── AbstractSuppressionAnalyzer
+│   │   ├── CpeSuppressionAnalyzer       # CPE 抑制
+│   │   └── VulnerabilitySuppressionAnalyzer # 漏洞抑制
+│   └── AbstractNpmAnalyzer
+│       ├── NodeAuditAnalyzer   # Node Audit
+│       ├── PnpmAuditAnalyzer   # pnpm Audit
+│       └── YarnAuditAnalyzer   # Yarn Audit
+├── ArchiveAnalyzer             # 归档文件分析（ZIP、TAR 等）
+├── CentralAnalyzer             # Maven Central 分析
+├── CPEAnalyzer                 # CPE 匹配分析
+├── NvdCveAnalyzer              # NVD CVE 分析
+├── OssIndexAnalyzer            # Sonatype OSS Index 分析
+├── RetireJsAnalyzer            # RetireJS 分析
+├── HintAnalyzer                # 提示分析
+├── FalsePositiveAnalyzer       # 误报分析
+├── KnownExploitedVulnerabilityAnalyzer # 已知利用漏洞分析
+└── UnusedSuppressionRuleAnalyzer # 未使用的抑制规则分析
+```
+
+### 4.3 分析器加载机制（SPI）
+
+Dependency-Check 使用 Java SPI（Service Provider Interface）机制动态加载所有分析器：
+
+**配置文件**：`META-INF/services/org.owasp.dependencycheck.analyzer.Analyzer`
+
+```
+# 文件中列出了所有 Analyzer 实现类的全限定名
+org.owasp.dependencycheck.analyzer.JarAnalyzer
+org.owasp.dependencycheck.analyzer.CentralAnalyzer
+org.owasp.dependencycheck.analyzer.CPEAnalyzer
+org.owasp.dependencycheck.analyzer.NvdCveAnalyzer
+...
+```
+
+**加载流程**（AnalyzerService.java）：
+
+```java
+public List<Analyzer> getAnalyzers(List<AnalysisPhase> phases) {
+    final List<Analyzer> analyzers = new ArrayList<>();
+    final Iterator<Analyzer> iterator = service.iterator();
+    while (iterator.hasNext()) {
+        final Analyzer a = iterator.next();
+        // 1. 按阶段过滤
+        if (!phases.contains(a.getAnalysisPhase())) continue;
+        // 2. 实验性分析器默认不加载
+        if (!experimentalEnabled && a.getClass().isAnnotationPresent(Experimental.class)) continue;
+        // 3. 已退休分析器默认不加载
+        if (!retiredEnabled && a.getClass().isAnnotationPresent(Retired.class)) continue;
+        analyzers.add(a);
+    }
+    return analyzers;
+}
+```
+
+---
+
+## 5. 分析阶段详解
+
+### 5.1 15 个分析阶段
+
+| 阶段序号 | 阶段名称 | 绑定的分析器 | 作用 |
+|---------|---------|-------------|------|
+| 1 | INITIAL | ArchiveAnalyzer | 解压归档文件（ZIP、TAR、JAR 等），提取内部文件作为新依赖 |
+| 2 | PRE_INFORMATION_COLLECTION | ElixirMixAuditAnalyzer, RubyBundleAuditAnalyzer | 预信息收集 |
+| 3 | INFORMATION_COLLECTION | JarAnalyzer, FileNameAnalyzer, CentralAnalyzer 等 30+ | **核心信息收集阶段**，从各种文件类型中提取依赖信息 |
+| 4 | INFORMATION_COLLECTION2 | PEAnalyzer | PE 文件分析（Windows 可执行文件） |
+| 5 | POST_INFORMATION_COLLECTION1 | DependencyMergingAnalyzer | 合并具有相同标识符的依赖 |
+| 6 | POST_INFORMATION_COLLECTION2 | HintAnalyzer | 根据提示规则补充依赖信息 |
+| 7 | POST_INFORMATION_COLLECTION3 | VersionFilterAnalyzer | 过滤版本信息，保留最准确的版本 |
+| 8 | PRE_IDENTIFIER_ANALYSIS | NpmCPEAnalyzer | NPM 包的 CPE 预分析 |
+| 9 | IDENTIFIER_ANALYSIS | CPEAnalyzer | **CPE 匹配**，将依赖与已知 CPE 标识符匹配 |
+| 10 | POST_IDENTIFIER_ANALYSIS | CpeSuppressionAnalyzer, FalsePositiveAnalyzer | 处理 CPE 抑制规则和误报 |
+| 11 | PRE_FINDING_ANALYSIS | （无） | 预漏洞发现 |
+| 12 | FINDING_ANALYSIS | NvdCveAnalyzer, RetireJsAnalyzer, NodeAuditAnalyzer, PnpmAuditAnalyzer, YarnAuditAnalyzer | **漏洞发现**，将 CPE 与 CVE 匹配 |
+| 13 | FINDING_ANALYSIS_PHASE2 | OssIndexAnalyzer | **Sonatype OSS Index 漏洞发现** |
+| 14 | POST_FINDING_ANALYSIS | KnownExploitedVulnerabilityAnalyzer, VulnerabilitySuppressionAnalyzer | 后处理：标记已知利用漏洞、应用抑制规则 |
+| 15 | FINAL | DependencyBundlingAnalyzer, UnusedSuppressionRuleAnalyzer | 最终处理：依赖打包、报告未使用的抑制规则 |
+
+### 5.2 阶段执行顺序图
+
+```
+时间 →
+├── INITIAL ──────────────────────────────────────────────────
+│    └── ArchiveAnalyzer（解压所有归档文件）
+├── PRE_INFORMATION_COLLECTION ──────────────────────────────
+│    ├── ElixirMixAuditAnalyzer
+│    └── RubyBundleAuditAnalyzer
+├── INFORMATION_COLLECTION ──────────────────────────────────
+│    ├── JarAnalyzer（解析 JAR 的 Manifest、POM、包名）
+│    ├── FileNameAnalyzer（从文件名提取信息）
+│    ├── CentralAnalyzer（查询 Maven Central）
+│    ├── AssemblyAnalyzer（.NET 程序集）
+│    ├── ComposerLockAnalyzer（PHP）
+│    ├── GolangModAnalyzer（Go）
+│    ├── NodePackageAnalyzer（Node.js）
+│    ├── PipAnalyzer（Python）
+│    ├── ...（30+ 分析器并行执行）
+│    └── OpenSSLAnalyzer
+├── INFORMATION_COLLECTION2 ─────────────────────────────────
+│    └── PEAnalyzer
+├── POST_INFORMATION_COLLECTION1 ────────────────────────────
+│    └── DependencyMergingAnalyzer（合并重复依赖）
+├── POST_INFORMATION_COLLECTION2 ────────────────────────────
+│    └── HintAnalyzer（应用提示规则）
+├── POST_INFORMATION_COLLECTION3 ────────────────────────────
+│    └── VersionFilterAnalyzer（过滤版本）
+├── PRE_IDENTIFIER_ANALYSIS ─────────────────────────────────
+│    └── NpmCPEAnalyzer
+├── IDENTIFIER_ANALYSIS ─────────────────────────────────────
+│    └── CPEAnalyzer（CPE 匹配）
+├── POST_IDENTIFIER_ANALYSIS ────────────────────────────────
+│    ├── CpeSuppressionAnalyzer
+│    └── FalsePositiveAnalyzer
+├── PRE_FINDING_ANALYSIS ────────────────────────────────────
+│    （无分析器）
+├── FINDING_ANALYSIS ────────────────────────────────────────
+│    ├── NvdCveAnalyzer（NVD CVE 匹配）
+│    ├── RetireJsAnalyzer（RetireJS）
+│    ├── NodeAuditAnalyzer（Node Audit）
+│    ├── PnpmAuditAnalyzer
+│    └── YarnAuditAnalyzer
+├── FINDING_ANALYSIS_PHASE2 ─────────────────────────────────
+│    └── OssIndexAnalyzer（Sonatype OSS Index）
+├── POST_FINDING_ANALYSIS ───────────────────────────────────
+│    ├── KnownExploitedVulnerabilityAnalyzer
+│    └── VulnerabilitySuppressionAnalyzer
+└── FINAL ───────────────────────────────────────────────────
+     ├── DependencyBundlingAnalyzer
+     └── UnusedSuppressionRuleAnalyzer
+```
+
+---
+
+## 6. 报告生成机制
+
+### 6.1 ReportGenerator 类
+
+`ReportGenerator.java`（594 行）负责生成分析报告，使用 Apache Velocity 模板引擎。
+
+### 6.2 支持的格式
+
+```java
+public enum Format {
+    ALL,      // 所有格式
+    XML,      // XML 格式
+    HTML,     // HTML 格式（默认）
+    JSON,     // JSON 格式
+    CSV,      // CSV 格式
+    SARIF,    // SARIF 格式（静态分析结果交换格式）
+    JENKINS,  // Jenkins 专用 HTML
+    JUNIT,    // JUnit XML 格式
+    GITLAB    // GitLab JSON 格式
+}
+```
+
+⚠️ **注意**：Dependency-Check **不支持** PDF 和 EXCEL 格式的原生输出。如需 PDF，需要通过 HTML 转换。
+
+### 6.3 报告生成流程
+
+```
+Engine.writeReports(applicationName, outputDir, format)
+  └── 创建 ReportGenerator
+       ├── createVelocityEngine() → 创建 Velocity 引擎
+       └── createContext() → 构建 VelocityContext
+            ├── applicationName（项目名称）
+            ├── dependencies（依赖列表，按名称排序）
+            ├── analyzers（分析器列表）
+            ├── properties（数据库属性，含 NVD 时间戳）
+            ├── scanDate（扫描时间）
+            └── 工具类（EscapeTool, ReportTool, Checksum 等）
+  
+  └── reportGenerator.write(outputLocation, format)
+       ├── 如果是 ALL → 递归生成所有格式
+       └── 否则 → getReportFile() 确定文件名
+            └── processTemplate() → 使用 Velocity 模板引擎渲染
+                 ├── 加载模板文件（templates/{format}Report.vsl）
+                 └── velocityEngine.evaluate() → 渲染输出
+```
+
+### 6.4 模板机制
+
+- **模板引擎**：Apache Velocity
+- **模板位置**：`core/src/main/resources/templates/`
+- **命名规则**：`{Format名称}Report.vsl`
+  - `htmlReport.vsl` → HTML 报告
+  - `jsonReport.vsl` → JSON 报告
+  - `xmlReport.vsl` → XML 报告
+  - 等等
+- **自定义模板**：支持指定外部模板文件路径
+
+### 6.5 报告文件名
+
+| 格式 | 默认文件名 |
+|------|-----------|
+| HTML | `dependency-check-report.html` |
+| XML | `dependency-check-report.xml` |
+| JSON | `dependency-check-report.json` |
+| CSV | `dependency-check-report.csv` |
+| SARIF | `dependency-check-report.sarif` |
+| JUNIT | `dependency-check-junit.xml` |
+| JENKINS | `dependency-check-jenkins.html` |
+| GITLAB | `dependency-check-gitlab.json` |
+
+---
+
+## 7. 核心分析器详解
+
+### 7.1 JarAnalyzer（JAR 分析器）
+
+**文件**：`JarAnalyzer.java`（1450 行）
+**阶段**：`INFORMATION_COLLECTION`
+**支持的文件**：`.jar`, `.war`, `.aar`
+**排除的文件**：`*-doc.jar`, `*-src.jar`, `*-javadoc.jar`, `*-sources.jar`
+
+#### 分析流程
+
+```
+analyzeDependency(dependency, engine)
+  ├── collectClassNames() → 收集 JAR 中的类名
+  │    ├── 遍历 JAR 中的所有条目
+  │    └── 提取 .class 文件的包名和类名
+  │
+  ├── 检查是否为无效文件
+  │    ├── macOS 元数据文件（._ 前缀）→ 移除
+  │    └── 无效 ZIP 文件 → 移除
+  │
+  ├── parseManifest() → 解析 MANIFEST.MF
+  │    ├── 提取 Implementation-Title, Implementation-Version
+  │    ├── 提取 Implementation-Vendor, Implementation-Vendor-Id
+  │    ├── 提取 Bundle-Name, Bundle-Version, Bundle-Description
+  │    ├── 提取 Main-Class, Specification-Title 等
+  │    └── 过滤 IGNORE_KEYS（built-by, created-by, build-jdk 等）
+  │
+  ├── analyzePOM() → 解析 pom.xml / pom.properties
+  │    ├── 检查 JAR 同级目录是否有 .pom 文件
+  │    ├── 遍历 JAR 内的 META-INF/maven/ 下的 pom.xml
+  │    ├── 提取 GroupId, ArtifactId, Version
+  │    ├── 设置 POM 证据（vendor, product, version）
+  │    └── 发现 shaded 依赖 → 作为新依赖添加到 Engine
+  │
+  ├── analyzePackageNames() → 分析包名作为证据
+  │    └── 将 Java 包名转换为证据（如 com.fasterxml.jackson → Jackson）
+  │
+  └── setEcosystem(JAVA) → 设置生态系统为 Java
+```
+
+#### 证据收集维度
+
+| 证据来源 | 提取的信息 | 置信度 |
+|---------|-----------|--------|
+| Manifest | Implementation-Title, Bundle-Name | 高 |
+| Manifest | Implementation-Version, Bundle-Version | 高 |
+| Manifest | Implementation-Vendor | 中 |
+| POM | GroupId:ArtifactId:Version | 最高 |
+| POM | name, description | 高 |
+| 包名 | Java 包名（如 com.fasterxml.jackson） | 中 |
+
+#### Shaded 依赖检测
+
+当 JAR 内嵌了其他 JAR 的 POM 时，JarAnalyzer 会将这些内嵌依赖提取为独立的 Dependency 对象：
+
+```java
+// 如果 POM 的 artifactId 与 JAR 文件名不匹配，说明是 shaded 依赖
+if (dependency.getActualFile().getName().startsWith(artifactId)) {
+    // 属于当前 JAR 的 POM，设置证据
+    setPomEvidence(dependency, pom, classes, true);
+} else {
+    // 是 shaded 依赖，创建新的 Dependency
+    Dependency newDependency = new Dependency();
+    newDependency.setName(String.format("%s:%s", groupId, pom.getArtifactId()));
+    newDependency.setVersion(version);
+    engine.addDependency(newDependency);
+}
+```
+
+### 7.2 CPEAnalyzer（CPE 匹配分析器）
+
+**阶段**：`IDENTIFIER_ANALYSIS`
+
+CPEAnalyzer 负责将依赖与已知的 CPE（Common Platform Enumeration）标识符进行匹配。CPE 是 NVD 用于标识软件产品的标准格式：
+
+```
+cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*
+  │  │  │      │       │
+  │  │  │      │       └── 版本
+  │  │  │      └────────── 产品名
+  │  │  └───────────────── 厂商
+  │  └──────────────────── 类型（a=应用）
+  └─────────────────────── CPE 版本
+```
+
+**匹配过程**：
+1. 从依赖的证据中提取 vendor、product、version 信息
+2. 在 CPE 数据库中搜索匹配的 CPE 条目
+3. 为匹配的 CPE 设置置信度
+
+### 7.3 NvdCveAnalyzer（NVD CVE 分析器）
+
+**阶段**：`FINDING_ANALYSIS`
+
+NvdCveAnalyzer 负责将依赖的 CPE 标识符与 NVD 中的 CVE（Common Vulnerabilities and Exposures）记录进行匹配。
+
+**匹配过程**：
+1. 获取依赖的所有 CPE 标识符
+2. 在 NVD 数据库中查询匹配的 CVE 记录
+3. 将匹配的漏洞信息添加到依赖的 `vulnerabilities` 列表中
+
+### 7.4 OssIndexAnalyzer（Sonatype OSS Index 分析器）
+
+**阶段**：`FINDING_ANALYSIS_PHASE2`
+
+OssIndexAnalyzer 使用 Sonatype OSS Index 服务进行漏洞检测。它通过 HTTP API 查询依赖的漏洞信息。
+
+**特点**：
+- 需要网络连接
+- 需要配置 API Key（可选，但未配置时会返回 401）
+- 支持 PURL（Package URL）格式的依赖标识
+- 作为 NVD 的补充数据源
+
+---
+
+## 8. 数据流与依赖管理
+
+### 8.1 依赖对象模型
+
+```java
+public class Dependency {
+    private String fileName;           // 文件名
+    private String filePath;           // 文件路径
+    private String actualFilePath;     // 实际文件路径
+    private String displayFileName;    // 显示文件名
+    private String packagePath;        // 包路径（如 groupId:artifactId:version）
+    private String md5sum;             // MD5 哈希
+    private String sha1sum;            // SHA1 哈希
+    private String sha256sum;          // SHA256 哈希
+    private String description;        // 描述
+    private String license;            // 许可证
+    private String version;            // 版本
+    private String name;               // 名称
+    private String ecosystem;          // 生态系统（JAVA, DOTNET, JS 等）
+    private Set<Identifier> identifiers; // 标识符集合（CPE, PURL 等）
+    private Set<Vulnerability> vulnerabilities; // 漏洞集合
+    private Map<EvidenceType, List<Evidence>> evidenceMap; // 证据映射
+    private Set<String> projectReferences; // 项目引用
+}
+```
+
+### 8.2 标识符体系
+
+```java
+public interface Identifier {
+    String getValue();           // 标识符值
+    Confidence getConfidence();  // 置信度
+    String getUrl();             // 参考 URL
+    String getType();            // 类型（CPE, PURL, GAV 等）
+}
+```
+
+**标识符类型**：
+- **CPE**（Common Platform Enumeration）：`cpe:2.3:a:apache:log4j:2.14.1:*:*:*:*:*:*:*`
+- **PURL**（Package URL）：`pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1`
+- **GAV**（Group:Artifact:Version）：`org.apache.logging.log4j:log4j-core:2.14.1`
+
+### 8.3 证据体系
+
+```java
+public enum EvidenceType {
+    VENDOR,     // 厂商证据
+    PRODUCT,    // 产品证据
+    VERSION     // 版本证据
+}
+```
+
+每个证据包含：
+- **source**：证据来源（如 "Manifest", "POM", "FileName"）
+- **name**：证据名称
+- **value**：证据值
+- **confidence**：置信度（HIGH, MEDIUM, LOW）
+
+### 8.4 漏洞模型
+
+```java
+public class Vulnerability {
+    private String name;              // 漏洞名称（如 CVE-2021-44228）
+    private String description;       // 漏洞描述
+    private float cvssScore;          // CVSS 评分
+    private String cvssAccessVector;  // CVSS 访问向量
+    private String cvssAccessComplexity; // CVSS 访问复杂度
+    private String cvssAuthentication;   // CVSS 认证
+    private String cvssConfidentialityImpact; // CVSS 机密性影响
+    private String cvssIntegrityImpact;     // CVSS 完整性影响
+    private String cvssAvailabilityImpact;  // CVSS 可用性影响
+    private String severity;           // 严重程度（CRITICAL, HIGH, MEDIUM, LOW）
+    private Set<CweEntry> cwes;        // CWE 条目
+    private Set<String> references;    // 参考链接
+    private String vulnerableSoftware; // 受影响的软件
+}
+```
+
+---
+
+## 9. 扩展机制
+
+### 9.1 自定义分析器
+
+可以通过实现 `Analyzer` 接口来添加自定义分析器：
+
+```java
+public class CustomAnalyzer extends AbstractFileTypeAnalyzer {
+    @Override
+    protected FileFilter getFileFilter() {
+        return FileFilterBuilder.newInstance().addExtensions(".custom").build();
+    }
+
+    @Override
+    public String getName() {
+        return "Custom Analyzer";
+    }
+
+    @Override
+    public AnalysisPhase getAnalysisPhase() {
+        return AnalysisPhase.INFORMATION_COLLECTION;
+    }
+
+    @Override
+    protected void analyzeDependency(Dependency dependency, Engine engine) throws AnalysisException {
+        // 自定义分析逻辑
+    }
+}
+```
+
+### 9.2 自定义报告模板
+
+可以通过创建自定义 Velocity 模板来生成自定义格式的报告：
+
+```java
+// 使用自定义模板路径
+engine.writeReports("MyApp", outputDir, "path/to/custom/template.vsl");
+```
+
+### 9.3 抑制规则
+
+可以通过 XML 文件配置抑制规则，忽略误报：
+
+```xml
+<suppressions>
+    <suppress>
+        <notes>这是一个误报</notes>
+        <cve>CVE-2021-44228</cve>
+    </suppress>
+</suppressions>
+```
+
+---
+
+## 10. 常见问题与最佳实践
+
+### 10.1 常见问题
+
+| 问题 | 原因 | 解决方法 |
+|------|------|---------|
+| NVD 更新慢 | 未配置 API Key | 申请 NVD API Key 并配置 |
+| SpotBugs 编译失败 | JDK 版本不兼容 | 使用 `-Dspotbugs.skip=true` 跳过 |
+| 扫描结果为空 | 项目未编译 | 先编译项目生成 JAR 包 |
+| Sonatype OSS Index 401 | 未配置 API Key | 配置 Sonatype API Key |
+| 数据库不存在 | 首次运行或数据被删除 | 运行 `--noupdate` 或重新下载 |
+
+### 10.2 最佳实践
+
+1. **始终配置 NVD API Key**：大幅加速数据库更新
+2. **先编译再扫描**：DependencyCheck 需要扫描编译后的 JAR 包
+3. **使用 --noupdate 加速开发**：开发阶段跳过数据库更新
+4. **生成多种报告格式**：HTML 用于可视化，JSON 用于程序处理
+5. **配置抑制规则**：减少误报干扰
+6. **定期更新数据库**：确保检测到最新漏洞
+
+### 10.3 性能优化
+
+- **使用 `--exclude` 排除不必要的目录**：减少扫描范围
+- **增加 JVM 内存**：对于大型项目，增加 `-Xmx` 参数
+- **使用多线程**：DependencyCheck 自动使用多线程并行分析
+- **配置数据目录**：将数据库放在 SSD 上加速访问
+
+---
+
+## 附录
+
+### A. 参考资源
+
+- [OWASP Dependency-C
