@@ -1,0 +1,432 @@
+# OWASP Dependency-Check 本地环境搭建手册
+
+## 版本信息
+- **版本**：V1.0
+- **编写日期**：2026年5月29日
+- **基于版本**：Dependency-Check 12.0.2-SNAPSHOT
+- **作者**：实习项目组
+
+---
+
+## 目录
+
+1. [环境要求](#1-环境要求)
+2. [前置工具安装](#2-前置工具安装)
+3. [源码获取与编译](#3-源码获取与编译)
+4. [本地开发环境配置](#4-本地开发环境配置)
+5. [运行 Dependency-Check](#5-运行-dependency-check)
+6. [测试项目搭建](#6-测试项目搭建)
+7. [常见问题与解决方案](#7-常见问题与解决方案)
+
+---
+
+## 1. 环境要求
+
+### 1.1 硬件要求
+
+| 组件 | 最低要求 | 推荐配置 |
+|------|---------|---------|
+| 内存 | 4 GB | 8 GB+ |
+| 磁盘空间 | 10 GB | 20 GB+（含 NVD 数据库缓存） |
+| 网络 | 可访问 Maven Central | 建议配置国内镜像加速 |
+
+### 1.2 软件要求
+
+| 软件 | 版本要求 | 说明 |
+|------|---------|------|
+| JDK | 11+（推荐 17 或 21） | Dependency-Check 12.x 需要 JDK 11+ |
+| Maven | 3.6+ | 用于编译 Dependency-Check 源码 |
+| Git | 2.x | 版本控制 |
+| IDE | 任意 | 推荐 IntelliJ IDEA 或 VS Code |
+
+---
+
+## 2. 前置工具安装
+
+### 2.1 JDK 安装
+
+**Windows 环境：**
+
+1. 下载 JDK（推荐使用 Amazon Corretto 或 Adoptium Temurin）
+   - Amazon Corretto：https://aws.amazon.com/corretto/
+   - Adoptium Temurin：https://adoptium.net/
+
+2. 安装 JDK 后配置环境变量：
+   ```bash
+   # 设置 JAVA_HOME
+   setx JAVA_HOME "C:\Program Files\Java\jdk-17.0.1"
+   
+   # 将 Java 添加到 PATH
+   setx PATH "%PATH%;%JAVA_HOME%\bin"
+   ```
+
+3. 验证安装：
+   ```bash
+   java -version
+   ```
+
+### 2.2 Maven 安装
+
+1. 下载 Maven：https://maven.apache.org/download.cgi
+
+2. 解压到本地目录，配置环境变量：
+   ```bash
+   setx MAVEN_HOME "C:\Program Files\apache-maven-3.9.6"
+   setx PATH "%PATH%;%MAVEN_HOME%\bin"
+   ```
+
+3. 验证安装：
+   ```bash
+   mvn -version
+   ```
+
+4. **配置阿里云镜像加速（推荐）**：
+
+   编辑 `%MAVEN_HOME%\conf\settings.xml` 或 `%USERPROFILE%\.m2\settings.xml`：
+
+   ```xml
+   <mirrors>
+     <mirror>
+       <id>aliyunmaven</id>
+       <mirrorOf>central</mirrorOf>
+       <name>阿里云公共仓库</name>
+       <url>https://maven.aliyun.com/repository/public</url>
+     </mirror>
+   </mirrors>
+   ```
+
+### 2.3 Git 安装
+
+1. 下载 Git：https://git-scm.com/downloads
+
+2. 安装后配置：
+   ```bash
+   git config --global user.name "Your Name"
+   git config --global user.email "your.email@example.com"
+   ```
+
+---
+
+## 3. 源码获取与编译
+
+### 3.1 克隆 Dependency-Check 源码
+
+```bash
+# 克隆官方仓库
+git clone https://github.com/jeremylong/DependencyCheck.git
+cd DependencyCheck
+
+# 或者克隆阿里巴巴的 fork（如果适用）
+git clone https://github.com/your-org/DependencyCheck.git
+```
+
+### 3.2 编译源码
+
+**完整编译（跳过测试）：**
+
+```bash
+mvn clean install -DskipTests
+```
+
+**仅编译核心模块：**
+
+```bash
+mvn clean compile -pl core -am
+```
+
+**编译并运行测试：**
+
+```bash
+mvn clean verify
+```
+
+> **注意**：首次编译需要下载大量依赖，建议配置阿里云镜像加速。编译时间取决于网络速度，通常需要 10-30 分钟。
+
+### 3.3 常见编译问题
+
+#### 问题 1：依赖下载失败
+
+**现象**：Maven 下载依赖时超时或失败
+
+**解决方案**：
+1. 检查网络连接
+2. 配置阿里云镜像（见 2.2 节）
+3. 清除本地缓存后重试：
+   ```bash
+   mvn dependency:purge-local-repository
+   ```
+
+#### 问题 2：JDK 版本不兼容
+
+**现象**：编译时提示 Java 版本错误
+
+**解决方案**：
+1. 确认 JDK 版本 >= 11
+2. 检查 `JAVA_HOME` 环境变量是否正确
+3. 使用 `mvn -version` 确认 Maven 使用的 JDK 版本
+
+---
+
+## 4. 本地开发环境配置
+
+### 4.1 IntelliJ IDEA 配置
+
+1. 打开项目：`File -> Open`，选择 DependencyCheck 目录
+2. 等待 IDEA 索引完成（首次需要较长时间）
+3. 配置 JDK：`File -> Project Structure -> Project SDK`，选择 JDK 17+
+4. 配置 Maven：`File -> Settings -> Build, Execution, Deployment -> Build Tools -> Maven`
+   - Maven home path：选择本地 Maven 安装目录
+   - User settings file：选择 `settings.xml` 路径
+
+### 4.2 VS Code 配置
+
+1. 安装扩展：
+   - Extension Pack for Java
+   - Maven for Java
+
+2. 打开项目：`File -> Open Folder`，选择 DependencyCheck 目录
+
+3. 配置 Java 运行时：
+   - 按 `Ctrl+Shift+P`，输入 `Java: Configure Java Runtime`
+   - 选择 JDK 17+
+
+### 4.3 代码风格配置
+
+Dependency-Check 使用 Checkstyle 进行代码规范检查。在提交代码前，请确保：
+
+```bash
+# 运行 Checkstyle 检查
+mvn checkstyle:check
+```
+
+---
+
+## 5. 运行 Dependency-Check
+
+### 5.1 命令行运行
+
+**方式一：使用 Maven 插件（推荐用于测试）**
+
+在目标项目的 `pom.xml` 中添加：
+
+```xml
+<plugin>
+    <groupId>org.owasp</groupId>
+    <artifactId>dependency-check-maven</artifactId>
+    <version>12.0.2-SNAPSHOT</version>
+    <configuration>
+        <failBuildOnCVSS>7</failBuildOnCVSS>
+        <formats>
+            <format>HTML</format>
+            <format>JSON</format>
+        </formats>
+    </configuration>
+</plugin>
+```
+
+运行扫描：
+
+```bash
+mvn dependency-check:check
+```
+
+**方式二：使用 CLI 工具**
+
+```bash
+# 构建 CLI 模块
+mvn clean package -pl cli -am -DskipTests
+
+# 运行 CLI
+java -jar cli/target/dependency-check-12.0.2-SNAPSHOT.jar \
+    --project "My Project" \
+    --scan /path/to/project \
+    --format HTML \
+    --out /path/to/report
+```
+
+### 5.2 配置 NVD API Key（重要）
+
+从 2024 年起，NVD 要求使用 API Key 访问漏洞数据库：
+
+1. 注册 NVD API Key：https://nvd.nist.gov/developers/request-an-api-key
+
+2. 配置 API Key：
+   ```bash
+   # 方式一：环境变量
+   setx NVD_API_KEY "your-api-key-here"
+   
+   # 方式二：命令行参数
+   --nvdApiKey "your-api-key-here"
+   
+   # 方式三：配置文件
+   # 在 dependency-check.properties 中添加
+   # nvd.api.key=your-api-key-here
+   ```
+
+### 5.3 数据库缓存配置
+
+Dependency-Check 默认使用 H2 嵌入式数据库。对于大型项目，建议配置外部数据库：
+
+```bash
+# 使用 H2 文件数据库（推荐）
+--data /path/to/data/directory
+
+# 使用 MySQL/MariaDB
+--dbDriverName com.mysql.cj.jdbc.Driver \
+--dbDriverPath /path/to/mysql-connector.jar \
+--dbConnectionString jdbc:mysql://localhost:3306/dependencycheck \
+--dbUser username \
+--dbPassword password
+```
+
+---
+
+## 6. 测试项目搭建
+
+### 6.1 使用 damn-vulnerable-spring-boot-app
+
+本项目包含一个存在已知漏洞的 Spring Boot 应用，用于测试 Dependency-Check 的扫描功能。
+
+**项目位置**：`damn-vulnerable-spring-boot-app/`
+
+**运行方式**：
+
+```bash
+# 使用 Gradle 启动
+cd damn-vulnerable-spring-boot-app
+./gradlew bootRun
+```
+
+**运行 Dependency-Check 扫描**：
+
+```bash
+# 使用 Maven 插件扫描
+mvn dependency-check:check -f damn-vulnerable-spring-boot-app/pom.xml
+```
+
+### 6.2 使用 spring-petclinic
+
+Spring PetClinic 是一个经典的 Spring Boot 示例应用。
+
+**项目位置**：`实习专用/spring-petclinic/`
+
+**运行方式**：
+
+```bash
+# 使用 Maven Wrapper 启动
+cd 实习专用/spring-petclinic
+mvnw.cmd spring-boot:run
+```
+
+> **注意**：spring-petclinic 需要 JDK 17+。如果遇到 JDK 版本问题，请确保已安装 JDK 17 并正确配置 `JAVA_HOME`。
+
+### 6.3 使用 spring-cloud-alibaba
+
+**项目位置**：`实习专用/spring-cloud-alibaba/`
+
+### 6.4 生成扫描报告
+
+运行 Dependency-Check 后，报告默认生成在 `target/dependency-check-report.html`。
+
+查看已有报告：
+
+```bash
+# 打开之前生成的报告
+start reports/dependency-check-report.html
+```
+
+---
+
+## 7. 常见问题与解决方案
+
+### 7.1 Maven 构建失败
+
+**问题**：`No plugin found for prefix 'spring-boot'`
+
+**原因**：Maven 没有从中央仓库下载到 Spring Boot 插件
+
+**解决方案**：
+1. 确保网络连接正常
+2. 配置阿里云镜像加速
+3. 使用项目的 Maven Wrapper（`mvnw.cmd`）代替系统 Maven
+4. 手动下载缺失的依赖：
+   ```bash
+   mvn dependency:resolve
+   ```
+
+### 7.2 Gradle 构建失败
+
+**问题**：`Cannot find a Java installation matching: {languageVersion=17}`
+
+**原因**：项目需要 JDK 17，但当前系统 JDK 版本不匹配
+
+**解决方案**：
+1. 安装 JDK 17（可与其他版本共存）
+2. 配置 `JAVA_HOME` 指向 JDK 17
+3. 或在 `gradle.properties` 中配置 toolchain：
+   ```properties
+   # 允许 Gradle 自动下载缺失的 JDK
+   gradle.enterprise.toolchain.download.enabled=true
+   ```
+
+### 7.3 NVD 数据库更新失败
+
+**问题**：`Error downloading NVD CVE data`
+
+**原因**：NVD API 访问限制或网络问题
+
+**解决方案**：
+1. 注册并配置 NVD API Key
+2. 检查网络代理设置
+3. 使用离线数据源：
+   ```bash
+   --nvdApiKey YOUR_API_KEY
+   --nvdDatafeedUrl https://nvd.nist.gov/feeds/json/cve/1.1/
+   ```
+
+### 7.4 中文路径问题
+
+**问题**：在 Windows CMD 中执行包含中文路径的命令时失败
+
+**解决方案**：
+1. 切换 CMD 编码为 UTF-8：
+   ```bash
+   chcp 65001
+   ```
+2. 使用完整路径（避免相对路径中的中文）
+3. 推荐使用 PowerShell 或 Git Bash 替代 CMD
+
+### 7.5 内存不足
+
+**问题**：`OutOfMemoryError: Java heap space`
+
+**解决方案**：
+1. 增加 Maven 的 JVM 内存：
+   ```bash
+   set MAVEN_OPTS=-Xmx2g
+   ```
+2. 增加 Gradle 的 JVM 内存：
+   ```bash
+   set GRADLE_OPTS=-Xmx2g
+   ```
+
+---
+
+## 附录
+
+### A. 常用命令速查
+
+| 命令 | 说明 |
+|------|------|
+| `mvn clean install -DskipTests` | 编译并安装到本地仓库（跳过测试） |
+| `mvn dependency-check:check` | 运行依赖安全检查 |
+| `mvn dependency-check:aggregate` | 聚合多模块项目的检查结果 |
+| `mvn spring-boot:run` | 启动 Spring Boot 应用 |
+| `./gradlew bootRun` | 使用 Gradle 启动 Spring Boot 应用 |
+
+### B. 参考资源
+
+- OWASP Dependency-Check 官方文档：https://owasp.org/www-project-dependency-check/
+- Dependency-Check GitHub 仓库：https://github.com/jeremylong/DependencyCheck
+- NVD API 注册：https://nvd.nist.gov/developers/request-an-api-key
+- 阿里云 Maven 镜像：https://developer.aliyun.com/mirror/maven/
