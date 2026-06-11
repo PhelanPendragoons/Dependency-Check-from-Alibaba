@@ -33,6 +33,9 @@ public class ScanEngineService {
     @Value("${dependency-check.data-directory}")
     private String dataDirectory;
 
+    @Value("${dependency-check.nvd-api-key:}")
+    private String nvdApiKey;
+
     /**
      * 执行扫描并生成报告
      *
@@ -46,6 +49,15 @@ public class ScanEngineService {
             // 1. 创建 Settings 对象并配置数据目录
             Settings settings = new Settings();
             settings.setString(Settings.KEYS.DATA_DIRECTORY, dataDirectory);
+
+            // 配置 NVD API Key（如果设置了环境变量）
+            if (nvdApiKey != null && !nvdApiKey.isEmpty()) {
+                settings.setString(Settings.KEYS.NVD_API_KEY, nvdApiKey);
+                log.info("已配置 NVD API Key");
+            } else {
+                log.warn("未配置 NVD API Key，NVD 数据更新可能较慢");
+            }
+
 
             // 2. 创建 Engine 实例
             //    Engine(Settings) 构造函数会自动：

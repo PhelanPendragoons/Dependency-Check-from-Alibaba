@@ -6,6 +6,8 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
+
 
 /**
  * 异步任务线程池配置
@@ -37,7 +39,10 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("scan-task-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
+        // 拒绝策略：由调用者线程执行（避免任务丢失）
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
+
         return executor;
     }
 }

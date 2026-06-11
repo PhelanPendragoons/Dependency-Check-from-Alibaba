@@ -1,5 +1,6 @@
 package com.alibaba.dependencycheck.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,15 @@ public class ScanTaskDTO {
     private Integer totalDependencies;
     private Integer vulnerableDependencies;
     private String errorMessage;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime completedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }
+
+

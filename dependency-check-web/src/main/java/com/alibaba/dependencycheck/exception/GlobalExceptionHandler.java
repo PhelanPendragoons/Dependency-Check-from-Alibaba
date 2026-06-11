@@ -3,11 +3,14 @@ package com.alibaba.dependencycheck.exception;
 import com.alibaba.dependencycheck.model.vo.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
+
 
 /**
  * 全局异常处理器
@@ -41,8 +44,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理 @Valid 参数校验异常（Spring Boot Validation）
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        log.warn("参数校验失败: {}", message);
+        return Result.error(400, "参数校验失败: " + message);
+    }
+
+    /**
      * 处理文件操作异常
      */
+
     @ExceptionHandler(IOException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleIOException(IOException e) {

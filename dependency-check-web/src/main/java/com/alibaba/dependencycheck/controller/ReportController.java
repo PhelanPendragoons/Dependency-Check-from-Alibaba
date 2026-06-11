@@ -38,8 +38,11 @@ public class ReportController {
      * 浏览器会直接渲染 HTML 内容，方便用户查看。
      * </p>
      *
+     * <b>注意：</b>此接口返回 {@code ResponseEntity<Resource>} 而非 {@code Result<T>}，
+     * 因为需要直接输出 HTML 内容供浏览器渲染，而非 JSON 格式的统一响应。
+     *
      * @param taskId 扫描任务 ID
-     * @return HTML 报告内容
+     * @return HTML 报告内容（直接渲染，非 JSON 包装）
      */
     @GetMapping("/{taskId}")
     public ResponseEntity<Resource> viewReport(@PathVariable Long taskId) {
@@ -53,6 +56,7 @@ public class ReportController {
                         "inline; filename=\"dependency-check-report-" + taskId + ".html\"")
                 .body(resource);
     }
+
 
     /**
      * 检查报告是否存在
