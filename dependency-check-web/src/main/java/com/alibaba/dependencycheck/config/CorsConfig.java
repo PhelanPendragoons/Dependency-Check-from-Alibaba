@@ -14,8 +14,10 @@ import org.springframework.web.filter.CorsFilter;
  *
  * <b>重要说明：</b>
  * <ul>
- *   <li>使用 {@code addAllowedOriginPattern()} 而非 {@code addAllowedOrigin("*")}，
- *       因为 {@code setAllowCredentials(true)} 时不允许使用通配符 origin</li>
+ *   <li>使用 {@code addAllowedOrigin()} 而非 {@code addAllowedOriginPattern()}，
+ *       因为这里指定的是精确来源地址，不需要通配符匹配</li>
+ *   <li>{@code addAllowedOriginPattern} 用于通配符匹配（如 {@code *.example.com}），
+ *       而 {@code addAllowedOrigin} 用于精确匹配</li>
  *   <li>明确指定允许的来源 {@code http://localhost:5173}，而非使用 {@code "*"}，
  *       避免违反 CORS 规范中"credentials=true 时 origin 不能为通配符"的限制</li>
  *   <li>生产部署时需将 {@code localhost:5173} 替换为实际的前端域名</li>
@@ -29,7 +31,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         // 明确指定允许的来源（开发环境为 Vue 开发服务器）
         // 注意：不能使用 addAllowedOriginPattern("*") 与 setAllowCredentials(true) 同时使用
-        config.addAllowedOriginPattern("http://localhost:5173");
+        config.addAllowedOrigin("http://localhost:5173");
         // 允许所有请求头
         config.addAllowedHeader("*");
         // 允许所有 HTTP 方法

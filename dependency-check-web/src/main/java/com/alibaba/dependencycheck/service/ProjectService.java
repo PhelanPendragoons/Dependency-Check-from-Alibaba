@@ -51,12 +51,18 @@ public class ProjectService {
 
     /**
      * 创建项目（上传并解压 ZIP 文件）
+     * <p>
+     * 使用 {@code @Transactional} 确保文件保存和数据库插入的原子性。
+     * 如果数据库插入失败，已保存的文件不会被回滚（文件系统不支持事务），
+     * 但至少保证数据库状态的一致性。
+     * </p>
      *
      * @param file        上传的 ZIP 文件
      * @param name        项目名称
      * @param description 项目描述（可选）
      * @return 项目 DTO
      */
+    @Transactional
     public ProjectDTO createProject(MultipartFile file, String name, String description) throws IOException {
         // 1. 检查文件是否为空
         if (file.isEmpty()) {
