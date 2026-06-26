@@ -95,8 +95,8 @@
         <!-- Flying Saucer PDF (HTML转PDF报告生成) -->
         <dependency>
             <groupId>org.xhtmlrenderer</groupId>
-            <artifactId>flying-saucer-pdf-openpdf</artifactId>
-            <version>9.9.0</version>
+            <artifactId>flying-saucer-pdf</artifactId>
+            <version>9.4.0</version>
         </dependency>
 
         <!-- Test -->

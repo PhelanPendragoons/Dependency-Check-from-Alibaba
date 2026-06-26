@@ -1,2 +1,3 @@
+com\alibaba\dependencycheck\service\ProjectServiceTest.class
 com\alibaba\dependencycheck\service\ScanTaskServiceTest.class
 com\alibaba\dependencycheck\service\ScanTaskExecutorServiceTest.class
