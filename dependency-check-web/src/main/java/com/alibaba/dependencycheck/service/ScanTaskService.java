@@ -63,6 +63,15 @@ public class ScanTaskService {
             throw new BusinessException("项目不存在: " + projectId);
         }
 
+        // B3-07 + B3-05 修复：检查同一 projectId 是否已有 RUNNING 或 PENDING 任务
+        LambdaQueryWrapper<ScanTask> activeTaskQuery = new LambdaQueryWrapper<>();
+        activeTaskQuery.eq(ScanTask::getProjectId, projectId)
+                .in(ScanTask::getStatus, "RUNNING", "PENDING");
+        List<ScanTask> activeTasks = scanTaskMapper.selectList(activeTaskQuery);
+        if (!activeTasks.isEmpty()) {
+            throw new BusinessException("该项目已有扫描任务正在执行或等待中，请等待当前任务完成后再提交");
+        }
+
         // 2. 创建扫描任务记录
         ScanTask task = new ScanTask();
         task.setProjectId(projectId);

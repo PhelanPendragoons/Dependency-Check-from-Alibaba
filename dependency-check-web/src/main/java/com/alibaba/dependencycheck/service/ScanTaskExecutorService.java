@@ -61,26 +61,36 @@ public class ScanTaskExecutorService {
      * @param scanPath     待扫描的文件/目录路径
      * @param taskReportDir 报告输出目录
      */
+    /** B3-06: 通用错误码，用于脱敏处理 */
+    private static final String SCAN_ERROR_PREFIX = "SCAN_ERR";
+
     @Async("scanTaskExecutor")
     public void executeScan(Long taskId, String scanPath, String taskReportDir) {
         ScanTask task = scanTaskMapper.selectById(taskId);
+        // B3-10 修复：任务不存在时记录 WARN 日志（区分于系统异常），让调用方可通过日志感知
         if (task == null) {
-            log.error("任务不存在: {}", taskId);
+            log.warn("扫描任务不存在，可能已被删除或 ID 无效: taskId={}", taskId);
             return;
         }
 
         try {
-            // 更新任务状态为"运行中"
+            // B3-09 修复：更新任务状态为"运行中"，进度设为 10%（开始扫描）
             ScanTask runningTask = new ScanTask();
             runningTask.setId(task.getId());
             runningTask.setStatus("RUNNING");
+            runningTask.setProgress(10);
             runningTask.setStartedAt(LocalDateTime.now());
             scanTaskMapper.updateById(runningTask);
-
 
             // 执行扫描（调用 ScanEngineService）
             List<org.owasp.dependencycheck.dependency.Dependency> dependencies =
                     scanEngineService.scan(scanPath, taskReportDir);
+
+            // B3-09 修复：扫描完成后进度更新为 90%（保存结果中）
+            ScanTask progressTask = new ScanTask();
+            progressTask.setId(task.getId());
+            progressTask.setProgress(90);
+            scanTaskMapper.updateById(progressTask);
 
             // 保存扫描结果（每个漏洞生成一条记录）
             int vulnCount = 0;
@@ -108,7 +118,9 @@ public class ScanTaskExecutorService {
         } catch (Exception e) {
             log.error("扫描任务 {} 失败", taskId, e);
             task.setStatus("FAILED");
-            task.setErrorMessage(e.getMessage());
+            // B3-06 修复：脱敏处理 — 不直接暴露原始异常消息（可能含内部路径）
+            // 使用固定 errorCode 替代，完整异常信息仅记录在日志中
+            task.setErrorMessage(SCAN_ERROR_PREFIX + "_" + taskId + ": 扫描执行失败，请查看系统日志");
             task.setCompletedAt(LocalDateTime.now());
             scanTaskMapper.updateById(task);
         }

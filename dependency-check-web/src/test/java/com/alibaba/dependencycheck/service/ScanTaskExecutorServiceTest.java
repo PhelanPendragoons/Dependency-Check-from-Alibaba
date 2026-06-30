@@ -69,7 +69,7 @@ class ScanTaskExecutorServiceTest {
     // ==================== 扫描成功测试 ====================
 
     @Test
-    @DisplayName("扫描成功时，任务状态应从 PENDING → RUNNING → COMPLETED")
+    @DisplayName("扫描成功时，任务状态应从 PENDING → RUNNING(10%) → 90% → COMPLETED(100%)")
     void executeScan_shouldUpdateStatusToCompletedOnSuccess() {
         // 准备：任务存在，扫描引擎返回空列表
         when(scanTaskMapper.selectById(10L)).thenReturn(testTask);
@@ -79,26 +79,25 @@ class ScanTaskExecutorServiceTest {
         // 执行
         scanTaskExecutorService.executeScan(10L, "./uploads/test", "./reports/10");
 
-        // 验证：updateById 被调用了 2 次
-        // 注意：由于两次传入的是同一个 task 对象引用，getAllValues() 中的元素指向同一个对象
-        // 第二次修改会覆盖第一次的状态，因此不能通过 getAllValues() 区分
-        // 改用分别验证每次调用的参数
-        verify(scanTaskMapper, times(2)).updateById(taskCaptor.capture());
+        // B3-09 修复后：updateById 被调用 3 次（RUNNING+10% → 90% → COMPLETED+100%）
+        verify(scanTaskMapper, times(3)).updateById(taskCaptor.capture());
         List<ScanTask> capturedTasks = taskCaptor.getAllValues();
-        // 第一次调用时状态为 RUNNING
+        // 第一次调用：RUNNING + progress=10
         assertEquals("RUNNING", capturedTasks.get(0).getStatus());
+        assertEquals(10, capturedTasks.get(0).getProgress());
         assertNotNull(capturedTasks.get(0).getStartedAt());
-        // 第二次调用时状态为 COMPLETED
-        assertEquals("COMPLETED", capturedTasks.get(1).getStatus());
-        assertEquals(100, capturedTasks.get(1).getProgress());
-        assertEquals(0, capturedTasks.get(1).getTotalDependencies());
-        assertEquals(0, capturedTasks.get(1).getVulnerableDependencies());
-        assertNotNull(capturedTasks.get(1).getCompletedAt());
+        // 第二次调用：progress=90（中间进度）
+        assertEquals(90, capturedTasks.get(1).getProgress());
+        // 第三次调用：COMPLETED + progress=100
+        assertEquals("COMPLETED", capturedTasks.get(2).getStatus());
+        assertEquals(100, capturedTasks.get(2).getProgress());
+        assertEquals(0, capturedTasks.get(2).getTotalDependencies());
+        assertEquals(0, capturedTasks.get(2).getVulnerableDependencies());
+        assertNotNull(capturedTasks.get(2).getCompletedAt());
     }
 
     @Test
     @DisplayName("扫描成功时，应保存每个依赖的扫描结果")
-
     void executeScan_shouldSaveScanResults() {
         // 准备：创建一个模拟的 Dependency
         org.owasp.dependencycheck.dependency.Dependency mockDep =
@@ -131,7 +130,7 @@ class ScanTaskExecutorServiceTest {
     // ==================== 扫描失败测试 ====================
 
     @Test
-    @DisplayName("扫描失败时，任务状态应从 RUNNING → FAILED，并记录错误信息")
+    @DisplayName("扫描失败时，任务状态应从 RUNNING → FAILED，错误信息已脱敏")
     void executeScan_shouldUpdateStatusToFailedOnException() {
         // 准备：扫描引擎抛出异常
         when(scanTaskMapper.selectById(10L)).thenReturn(testTask);
@@ -141,18 +140,19 @@ class ScanTaskExecutorServiceTest {
         // 执行
         scanTaskExecutorService.executeScan(10L, "./uploads/test", "./reports/10");
 
-        // 验证：updateById 被调用了 2 次
+        // 验证：updateById 被调用了 2 次（RUNNING+10% → FAILED）
         verify(scanTaskMapper, times(2)).updateById(taskCaptor.capture());
         List<ScanTask> capturedTasks = taskCaptor.getAllValues();
-        // 第一次调用时状态为 RUNNING
+        // 第一次调用时状态为 RUNNING + progress=10
         assertEquals("RUNNING", capturedTasks.get(0).getStatus());
+        assertEquals(10, capturedTasks.get(0).getProgress());
         assertNotNull(capturedTasks.get(0).getStartedAt());
-        // 第二次调用时状态为 FAILED
+        // 第二次调用时状态为 FAILED，错误信息已脱敏（B3-06）
         assertEquals("FAILED", capturedTasks.get(1).getStatus());
-        assertEquals("扫描超时", capturedTasks.get(1).getErrorMessage());
+        // B3-06: 错误信息不暴露原始异常消息，使用固定 errorCode 前缀
+        assertTrue(capturedTasks.get(1).getErrorMessage().startsWith("SCAN_ERR_10"),
+                "错误信息应脱敏，以 SCAN_ERR_ 开头");
         assertNotNull(capturedTasks.get(1).getCompletedAt());
-
-
     }
 
     @Test

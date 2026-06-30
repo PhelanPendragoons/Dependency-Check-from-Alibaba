@@ -87,6 +87,9 @@ class ScanTaskServiceTest {
     void createTask_shouldInitializeStatusAsPending() {
         // 准备
         when(projectMapper.selectById(1L)).thenReturn(testProject);
+        // B3-07: 模拟无活动任务（selectList 返回空列表）
+        when(scanTaskMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(Collections.emptyList());
         // 使用 doAnswer 模拟 MyBatis-Plus 的 insert 方法设置 ID
         doAnswer(invocation -> {
             ScanTask task = invocation.getArgument(0);
@@ -116,6 +119,53 @@ class ScanTaskServiceTest {
         assertThrows(BusinessException.class, () -> scanTaskService.createTask(999L));
         verify(scanTaskMapper, never()).insert(any());
         verify(scanTaskExecutorService, never()).executeScan(anyLong(), anyString(), anyString());
+    }
+
+    // ==================== B3-07 并发任务控制测试 ====================
+
+    @Test
+    @DisplayName("同一项目已有 RUNNING/PENDING 任务时，应拒绝创建新任务")
+    void createTask_shouldRejectWhenActiveTaskExists() {
+        // 准备：项目存在
+        when(projectMapper.selectById(1L)).thenReturn(testProject);
+
+        // 已有 RUNNING 任务
+        ScanTask activeTask = new ScanTask();
+        activeTask.setId(5L);
+        activeTask.setProjectId(1L);
+        activeTask.setStatus("RUNNING");
+        when(scanTaskMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(List.of(activeTask));
+
+        // 执行 & 验证
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> scanTaskService.createTask(1L));
+        assertTrue(ex.getMessage().contains("已有扫描任务正在执行"),
+                "错误信息应包含'已有扫描任务正在执行'");
+        verify(scanTaskMapper, never()).insert(any());
+        verify(scanTaskExecutorService, never()).executeScan(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("同一项目无活动任务时，应正常创建任务")
+    void createTask_shouldSucceedWhenNoActiveTask() {
+        // 准备：项目存在，无活动任务
+        when(projectMapper.selectById(1L)).thenReturn(testProject);
+        when(scanTaskMapper.selectList(any(LambdaQueryWrapper.class)))
+                .thenReturn(Collections.emptyList());
+        doAnswer(invocation -> {
+            ScanTask task = invocation.getArgument(0);
+            task.setId(10L);
+            return 1;
+        }).when(scanTaskMapper).insert(any(ScanTask.class));
+
+        // 执行
+        ScanTaskDTO result = scanTaskService.createTask(1L);
+
+        // 验证
+        assertNotNull(result);
+        assertEquals("PENDING", result.getStatus());
+        verify(scanTaskExecutorService).executeScan(eq(10L), anyString(), anyString());
     }
 
     // ==================== 查询任务测试 ====================
