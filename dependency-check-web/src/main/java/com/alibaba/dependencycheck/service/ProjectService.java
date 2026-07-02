@@ -17,14 +17,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -48,6 +52,59 @@ public class ProjectService {
     @Value("${app.upload-dir:./uploads}")
     private String uploadDir;
 
+    // ==================== B4 安全修复常量 ====================
+
+    /** B4-06: Windows 系统保留名称（大小写不敏感） */
+    private static final Set<String> WINDOWS_RESERVED_NAMES = Set.of(
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    );
+
+    /** B4-11: 项目名称最大长度 */
+    private static final int MAX_PROJECT_NAME_LENGTH = 255;
+
+    // ==================== B4 安全校验方法 ====================
+
+    /**
+     * B4-11 + B4-06: 项目名称安全校验
+     * <p>
+     * 校验规则：
+     * <ol>
+     *   <li>不能为 null 或空白</li>
+     *   <li>长度不能超过 {@value #MAX_PROJECT_NAME_LENGTH} 个字符</li>
+     *   <li>不能包含禁止字符：/ \ &lt; &gt; : " | ? *</li>
+     *   <li>不能包含路径穿越序列 ".."</li>
+     *   <li>不能使用 Windows 系统保留名称（B4-06）</li>
+     * </ol>
+     * </p>
+     *
+     * @param name 项目名称
+     * @throws BusinessException 如果名称不合法
+     */
+    private void validateProjectName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException("项目名称不能为空");
+        }
+        if (name.length() > MAX_PROJECT_NAME_LENGTH) {
+            throw new BusinessException("项目名称长度不能超过 " + MAX_PROJECT_NAME_LENGTH + " 个字符，当前: " + name.length());
+        }
+        // 检查禁止字符
+        for (char c : name.toCharArray()) {
+            if (c == '/' || c == '\\' || c == '<' || c == '>' || c == ':' ||
+                    c == '"' || c == '|' || c == '?' || c == '*') {
+                throw new BusinessException("项目名称包含非法字符: '" + c + "'");
+            }
+        }
+        // 检查路径穿越序列
+        if (name.contains("..")) {
+            throw new BusinessException("项目名称包含非法字符序列: \"..\"");
+        }
+        // B4-06: 检查 Windows 系统保留名称
+        if (WINDOWS_RESERVED_NAMES.contains(name.toUpperCase())) {
+            throw new BusinessException("项目名称使用了 Windows 系统保留名，不允许: " + name);
+        }
+    }
 
     /**
      * 创建项目（上传并解压 ZIP 文件）
@@ -64,6 +121,9 @@ public class ProjectService {
      */
     @Transactional
     public ProjectDTO createProject(MultipartFile file, String name, String description) throws IOException {
+        // B4-11 + B4-06: 项目名称安全校验
+        validateProjectName(name);
+
         // 1. 检查文件是否为空
         if (file.isEmpty()) {
             throw new BusinessException("上传文件不能为空");
@@ -73,6 +133,12 @@ public class ProjectService {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isBlank()) {
             throw new BusinessException("文件名不能为空");
+        }
+
+        // B4-08: 检查项目名是否重复
+        Project existing = projectMapper.findByName(name);
+        if (existing != null) {
+            throw new BusinessException("项目名已存在: " + name);
         }
 
         // 3. 创建项目目录
@@ -87,7 +153,28 @@ public class ProjectService {
         file.transferTo(new File(zipPath));
 
         // 5. 解压 ZIP 文件
-        unzip(zipPath, projectDir);
+        // B4-05: Zip Slip 检测到后清理恶意 ZIP 和已解压文件
+        try {
+            unzip(zipPath, projectDir);
+        } catch (BusinessException e) {
+            // B4-05: 清理恶意 ZIP 文件
+            try {
+                Files.deleteIfExists(Paths.get(zipPath));
+                log.info("已删除恶意ZIP文件: {}", zipPath);
+            } catch (IOException ex) {
+                log.warn("删除恶意ZIP文件失败: {}", zipPath, ex);
+            }
+            // B4-05: 清理已解压的目录
+            try {
+                if (Files.exists(projectPath)) {
+                    deleteDirectory(projectPath);
+                    log.info("已清理被污染的目录: {}", projectDir);
+                }
+            } catch (IOException ex) {
+                log.warn("清理目录失败: {}", projectDir, ex);
+            }
+            throw e;
+        }
 
         // 6. 保存项目信息到数据库
         Project project = new Project();
@@ -104,13 +191,20 @@ public class ProjectService {
     }
 
     /**
-     * 获取项目列表
+     * 获取项目列表（分页）
+     * <p>
+     * B4-02 修复：从全量返回改为分页返回，避免大数量级下的性能问题。
+     * 使用 MyBatis-Plus 的 {@link Page} 进行物理分页。
+     * </p>
+     *
+     * @param page     当前页码（从 1 开始）
+     * @param pageSize 每页大小
+     * @return 分页结果
      */
-    public List<ProjectDTO> listProjects() {
-        return projectMapper.selectList(null)
-                .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public IPage<ProjectDTO> listProjects(int page, int pageSize) {
+        Page<Project> pageParam = new Page<>(page, pageSize);
+        IPage<Project> result = projectMapper.selectPage(pageParam, null);
+        return result.convert(this::convertToDTO);
     }
 
     /**
@@ -220,9 +314,18 @@ public class ProjectService {
     /**
      * 解压 ZIP 文件（安全版本，防止路径穿越攻击）
      * <p>
+     * B4-05 修复：检测到路径穿越时不再仅记录警告，而是抛出异常，
+     * 由调用方负责清理恶意 ZIP 文件和已解压目录。
+     * </p>
+     * <p>
      * 使用 Path.normalize() 和 startsWith() 检查，
      * 防止恶意 ZIP 文件中包含 "../" 路径穿越攻击。
      * </p>
+     *
+     * @param zipFilePath ZIP 文件路径
+     * @param destDir     解压目标目录
+     * @throws IOException       如果解压过程中发生 I/O 错误
+     * @throws BusinessException 如果检测到路径穿越攻击（B4-05）
      */
     private void unzip(String zipFilePath, String destDir) throws IOException {
         Path destPath = Paths.get(destDir).normalize();
@@ -233,12 +336,13 @@ public class ProjectService {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(Paths.get(zipFilePath)))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                // 安全校验：防止路径穿越攻击（Zip Slip 漏洞）
+                // B4-05: 安全校验：防止路径穿越攻击（Zip Slip 漏洞）
                 Path entryPath = destPath.resolve(entry.getName()).normalize();
                 if (!entryPath.startsWith(destPath)) {
-                    log.warn("检测到路径穿越攻击，已跳过: {}", entry.getName());
+                    // B4-05 修复：检测到路径穿越后抛出异常，由调用方清理恶意文件
+                    log.error("检测到路径穿越攻击: entry={}, resolvedPath={}", entry.getName(), entryPath);
                     zis.closeEntry();
-                    continue;
+                    throw new BusinessException("检测到路径穿越攻击，文件上传被拒绝");
                 }
 
                 if (entry.isDirectory()) {
@@ -246,8 +350,8 @@ public class ProjectService {
                 } else {
                     // 确保父目录存在
                     Files.createDirectories(entryPath.getParent());
-                    // 写入文件
-                    Files.copy(zis, entryPath);
+                    // B4-10 修复：添加 REPLACE_EXISTING 选项，防止同名文件覆盖时报错
+                    Files.copy(zis, entryPath, StandardCopyOption.REPLACE_EXISTING);
                 }
                 zis.closeEntry();
             }

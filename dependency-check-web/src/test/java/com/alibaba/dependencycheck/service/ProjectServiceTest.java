@@ -9,6 +9,8 @@ import com.alibaba.dependencycheck.model.entity.Project;
 import com.alibaba.dependencycheck.model.entity.ScanResult;
 import com.alibaba.dependencycheck.model.entity.ScanTask;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,26 +20,30 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import java.io.Serializable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 
 /**
  * ProjectService 单元测试
  * <p>
- * 测试重点：
+ * 覆盖场景：
  * <ol>
  *   <li>级联删除：删除项目时是否同时清理 scan_task 和 scan_result</li>
  *   <li>物理文件清理：删除项目后上传目录是否被删除</li>
  *   <li>项目不存在时是否抛出 BusinessException</li>
+ *   <li>B4-02：分页查询</li>
+ *   <li>B4-08：项目名重复检查</li>
+ *   <li>B4-11：项目名安全校验（禁止字符、长度限制）</li>
+ *   <li>B4-06：Windows 保留名检查</li>
  * </ol>
  */
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +57,9 @@ class ProjectServiceTest {
 
     @Mock
     private ScanResultMapper scanResultMapper;
+
+    @Mock
+    private MultipartFile mockFile;
 
     @InjectMocks
     private ProjectService projectService;
@@ -97,7 +106,6 @@ class ProjectServiceTest {
 
     @Test
     @DisplayName("删除项目时，应使用正确的 taskId 查询条件删除扫描结果")
-
     void deleteProject_shouldUseCorrectTaskIdForResults() {
         // 准备
         when(projectMapper.selectById(1L)).thenReturn(testProject);
@@ -143,7 +151,6 @@ class ProjectServiceTest {
         verify(scanResultMapper, never()).delete(any());
         verify(scanTaskMapper, never()).delete(any());
         verify(projectMapper, never()).deleteById(any(java.io.Serializable.class));
-
     }
 
     @Test
@@ -164,7 +171,6 @@ class ProjectServiceTest {
     }
 
     // ==================== 物理文件清理测试 ====================
-
 
     @Test
     @DisplayName("删除项目时，应清理服务器上的物理文件")
@@ -201,22 +207,51 @@ class ProjectServiceTest {
         verify(projectMapper).deleteById(Long.valueOf(1L));
     }
 
-    // ==================== 列表查询测试 ====================
-
+    // ==================== B4-02: 分页查询测试 ====================
 
     @Test
-    @DisplayName("获取项目列表时，应返回所有项目")
-    void listProjects_shouldReturnAllProjects() {
-        // 准备
-        when(projectMapper.selectList(null)).thenReturn(Collections.singletonList(testProject));
+    @DisplayName("B4-02: 分页查询项目列表时，应返回分页结果")
+    void listProjects_shouldReturnPaginatedResults() {
+        // 准备：模拟 MyBatis-Plus 分页返回
+        Page<Project> mockPage = new Page<>(1, 10);
+        mockPage.setRecords(Collections.singletonList(testProject));
+        mockPage.setTotal(1);
+        when(projectMapper.selectPage(any(Page.class), isNull())).thenReturn(mockPage);
 
         // 执行
-        List<ProjectDTO> result = projectService.listProjects();
+        IPage<ProjectDTO> result = projectService.listProjects(1, 10);
 
         // 验证
-        assertEquals(1, result.size());
-        assertEquals("test-project", result.get(0).getName());
+        assertEquals(1, result.getTotal());
+        assertEquals(1, result.getRecords().size());
+        assertEquals("test-project", result.getRecords().get(0).getName());
+
+        // 验证使用了正确的分页参数
+        ArgumentCaptor<Page<Project>> pageCaptor = ArgumentCaptor.forClass(Page.class);
+        verify(projectMapper).selectPage(pageCaptor.capture(), isNull());
+        Page<Project> capturedPage = pageCaptor.getValue();
+        assertEquals(1, capturedPage.getCurrent());
+        assertEquals(10, capturedPage.getSize());
     }
+
+    @Test
+    @DisplayName("B4-02: 分页查询空列表时，应返回空结果")
+    void listProjects_shouldReturnEmptyPageWhenNoProjects() {
+        // 准备
+        Page<Project> mockPage = new Page<>(1, 10);
+        mockPage.setRecords(Collections.emptyList());
+        mockPage.setTotal(0);
+        when(projectMapper.selectPage(any(Page.class), isNull())).thenReturn(mockPage);
+
+        // 执行
+        IPage<ProjectDTO> result = projectService.listProjects(1, 10);
+
+        // 验证
+        assertEquals(0, result.getTotal());
+        assertTrue(result.getRecords().isEmpty());
+    }
+
+    // ==================== 项目详情查询测试 ====================
 
     @Test
     @DisplayName("获取项目详情时，应返回正确的项目信息")
@@ -241,4 +276,191 @@ class ProjectServiceTest {
         // 执行 & 验证
         assertThrows(BusinessException.class, () -> projectService.getProject(999L));
     }
+
+    // ==================== B4-11: 项目名安全校验测试 ====================
+
+    @Test
+    @DisplayName("B4-11: 项目名为空时，应抛出异常")
+    void createProject_shouldRejectEmptyName() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, null, "desc"));
+        assertTrue(ex.getMessage().contains("不能为空"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名为纯空白时，应抛出异常")
+    void createProject_shouldRejectBlankName() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "   ", "desc"));
+        assertTrue(ex.getMessage().contains("不能为空"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名超过255字符时，应抛出异常")
+    void createProject_shouldRejectTooLongName() {
+        String longName = "a".repeat(256);
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, longName, "desc"));
+        assertTrue(ex.getMessage().contains("255"), "错误信息应包含长度限制");
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含斜杠时，应抛出异常")
+    void createProject_shouldRejectNameWithSlash() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil/name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含反斜杠时，应抛出异常")
+    void createProject_shouldRejectNameWithBackslash() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil\\name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含..路径穿越序列时，应抛出异常")
+    void createProject_shouldRejectNameWithDotDot() {
+        // 注意：名中不含 / 等其他禁止字符，确保 .. 序列自身触发异常
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil..etc", "desc"));
+        assertTrue(ex.getMessage().contains(".."),
+                "错误信息应包含'..': " + ex.getMessage());
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含尖括号时，应抛出异常")
+    void createProject_shouldRejectNameWithAngleBrackets() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil<script>", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含冒号时，应抛出异常")
+    void createProject_shouldRejectNameWithColon() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "C:evil", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含双引号时，应抛出异常")
+    void createProject_shouldRejectNameWithQuote() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil\"name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含管道符时，应抛出异常")
+    void createProject_shouldRejectNameWithPipe() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil|name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含问号时，应抛出异常")
+    void createProject_shouldRejectNameWithQuestionMark() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil?name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-11: 项目名包含星号时，应抛出异常")
+    void createProject_shouldRejectNameWithAsterisk() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "evil*name", "desc"));
+        assertTrue(ex.getMessage().contains("非法字符"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    // ==================== B4-06: Windows 保留名测试 ====================
+
+    @Test
+    @DisplayName("B4-06: 项目名 CON 应被拒绝")
+    void createProject_shouldRejectWindowsReservedCON() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "CON", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-06: 项目名 NUL 应被拒绝")
+    void createProject_shouldRejectWindowsReservedNUL() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "NUL", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-06: 项目名 PRN 应被拒绝")
+    void createProject_shouldRejectWindowsReservedPRN() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "PRN", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-06: 项目名 COM1 应被拒绝")
+    void createProject_shouldRejectWindowsReservedCOM1() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "COM1", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-06: 项目名 LPT1 应被拒绝")
+    void createProject_shouldRejectWindowsReservedLPT1() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "LPT1", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("B4-06: Windows保留名大小写不敏感（con 应被拒绝）")
+    void createProject_shouldRejectWindowsReservedCaseInsensitive() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "con", "desc"));
+        assertTrue(ex.getMessage().contains("Windows"));
+        verify(projectMapper, never()).insert(any());
+    }
+
+    // ==================== B4-08: 项目名重复检查测试 ====================
+
+    @Test
+    @DisplayName("B4-08: 项目名已存在时，应拒绝创建")
+    void createProject_shouldRejectDuplicateName() {
+        // 准备：合法名称 + 非空文件 + 已有同名项目
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("test.zip");
+        when(projectMapper.findByName("existing-project")).thenReturn(testProject);
+
+        // 执行
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> projectService.createProject(mockFile, "existing-project", "desc"));
+        assertTrue(ex.getMessage().contains("已存在"));
+        verify(projectMapper, never()).insert(any());
+    }
+
 }

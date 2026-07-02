@@ -190,12 +190,12 @@
 - **描述**：`viewReport()` 正常返回文件流，异常时 `GlobalExceptionHandler` 返回 JSON，前端需按 `Content-Type` 分支判断。
 - **建议**：异常时返回 HTTP 错误码 + `X-Error-Message` 响应头，或保持 JSON body 但约定前端按状态码判断。
 
-### 5.3 PageResult 启用或删除 🟢
+### 5.3 PageResult 已启用 🟢
 
-- **状态**：🟡 待办
+- **状态**：✅ 已完成（7/2 B4-02）
 - **标签**：`api` `cleanup`
-- **关联文件**：[PageResult.java](src/main/java/com/alibaba/dependencycheck/model/vo/PageResult.java)
-- **描述**：`PageResult<T>` 定义了但从未使用，要么在分页接口里用起来，要么删除避免误导。
+- **关联文件**：[PageResult.java](src/main/java/com/alibaba/dependencycheck/model/vo/PageResult.java)、[ProjectController.java](src/main/java/com/alibaba/dependencycheck/controller/ProjectController.java)
+- **描述**：`PageResult<T>` 原先定义了但从未使用。B4-02 已将 `listProjects()` 改为分页接口，`ProjectController` 中返回 `Result<PageResult<ProjectDTO>>`，PageResult 已启用。
 
 ---
 

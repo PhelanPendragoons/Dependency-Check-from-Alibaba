@@ -1,8 +1,10 @@
 package com.alibaba.dependencycheck.controller;
 
 import com.alibaba.dependencycheck.model.dto.ProjectDTO;
+import com.alibaba.dependencycheck.model.vo.PageResult;
 import com.alibaba.dependencycheck.model.vo.Result;
 import com.alibaba.dependencycheck.service.ProjectService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * 项目管理接口
@@ -58,14 +59,24 @@ public class ProjectController {
     }
 
     /**
-     * 获取项目列表
+     * 获取项目列表（分页）
+     * <p>
+     * B4-02 修复：支持分页查询，避免大数量级下的性能问题。
+     * 默认每页 10 条，从第 1 页开始。
+     * </p>
      *
-     * @return 所有项目的列表
+     * @param page     当前页码（默认 1）
+     * @param pageSize 每页大小（默认 10）
+     * @return 分页结果
      */
     @GetMapping
-    public Result<List<ProjectDTO>> listProjects() {
-        List<ProjectDTO> projects = projectService.listProjects();
-        return Result.success(projects);
+    public Result<PageResult<ProjectDTO>> listProjects(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        IPage<ProjectDTO> pageResult = projectService.listProjects(page, pageSize);
+        PageResult<ProjectDTO> pageInfo = new PageResult<>(
+                pageResult.getRecords(), pageResult.getTotal(), page, pageSize);
+        return Result.success(pageInfo);
     }
 
     /**
