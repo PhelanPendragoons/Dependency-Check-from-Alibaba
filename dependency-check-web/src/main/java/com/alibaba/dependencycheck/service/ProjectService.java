@@ -64,6 +64,12 @@ public class ProjectService {
     /** B4-11: 项目名称最大长度 */
     private static final int MAX_PROJECT_NAME_LENGTH = 255;
 
+    /** B4-05: 文件删除重试次数 */
+    private static final int MAX_DELETE_RETRIES = 3;
+
+    /** B4-05: 文件删除重试间隔（毫秒），应对 Windows 文件锁延迟 */
+    private static final long DELETE_RETRY_DELAY_MS = 100;
+
     // ==================== B4 安全校验方法 ====================
 
     /**
@@ -157,21 +163,31 @@ public class ProjectService {
         try {
             unzip(zipPath, projectDir);
         } catch (BusinessException e) {
-            // B4-05: 清理恶意 ZIP 文件
-            try {
-                Files.deleteIfExists(Paths.get(zipPath));
+            // B4-05: 清理恶意 ZIP 文件和已解压目录（加固版，含重试和失败收集）
+            java.util.List<String> cleanupFailures = new java.util.ArrayList<>();
+
+            // 清理恶意 ZIP 文件（带重试）
+            Path zipPathObj = Paths.get(zipPath);
+            if (!deleteFileWithRetry(zipPathObj)) {
+                cleanupFailures.add(zipPath);
+            } else {
                 log.info("已删除恶意ZIP文件: {}", zipPath);
-            } catch (IOException ex) {
-                log.warn("删除恶意ZIP文件失败: {}", zipPath, ex);
             }
-            // B4-05: 清理已解压的目录
-            try {
-                if (Files.exists(projectPath)) {
-                    deleteDirectory(projectPath);
+
+            // 清理已解压的目录（带重试，收集失败列表）
+            if (Files.exists(projectPath)) {
+                List<String> dirFailures = deleteDirectory(projectPath);
+                if (dirFailures.isEmpty()) {
                     log.info("已清理被污染的目录: {}", projectDir);
+                } else {
+                    cleanupFailures.addAll(dirFailures);
                 }
-            } catch (IOException ex) {
-                log.warn("清理目录失败: {}", projectDir, ex);
+            }
+
+            // 统一报告清理结果
+            if (!cleanupFailures.isEmpty()) {
+                log.error("B4-05 清理不彻底！以下 {} 个文件/目录可能残留: {}",
+                        cleanupFailures.size(), cleanupFailures);
             }
             throw e;
         }
@@ -273,41 +289,85 @@ public class ProjectService {
 
         // 6. 清理服务器上的物理文件
         //    注意：物理文件删除失败不影响数据库操作，仅记录警告
-        try {
-            Path projectPath = Paths.get(project.getFilePath());
-            if (Files.exists(projectPath)) {
-                deleteDirectory(projectPath);
+        Path projectPath = Paths.get(project.getFilePath());
+        if (Files.exists(projectPath)) {
+            List<String> failures = deleteDirectory(projectPath);
+            if (failures.isEmpty()) {
                 log.info("已清理项目物理文件: {}", project.getFilePath());
+            } else {
+                log.warn("清理项目物理文件不彻底，{} 个文件/目录残留: {}", failures.size(), failures);
             }
-        } catch (Exception e) {
-            log.warn("清理项目物理文件失败: {}", project.getFilePath(), e);
         }
     }
 
     /**
-     * 递归删除目录及其所有子文件和子目录
+     * 带重试的单文件删除
+     * <p>
+     * B4-05 加固：文件删除失败后等待 {@value #DELETE_RETRY_DELAY_MS}ms 重试，
+     * 最多重试 {@value #MAX_DELETE_RETRIES} 次，应对 Windows 下文件锁短暂延迟。
+     * </p>
+     *
+     * @param path 要删除的文件或目录路径
+     * @return true 如果删除成功，false 如果所有重试均失败
+     */
+    private boolean deleteFileWithRetry(Path path) {
+        for (int attempt = 1; attempt <= MAX_DELETE_RETRIES; attempt++) {
+            try {
+                Files.deleteIfExists(path);
+                if (!Files.exists(path)) {
+                    return true;
+                }
+                if (attempt < MAX_DELETE_RETRIES) {
+                    Thread.sleep(DELETE_RETRY_DELAY_MS);
+                }
+            } catch (IOException e) {
+                if (attempt == MAX_DELETE_RETRIES) {
+                    log.warn("删除文件失败（已重试{}次）: {}", MAX_DELETE_RETRIES, path, e);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("删除文件被中断: {}", path);
+                return false;
+            }
+        }
+        return !Files.exists(path);
+    }
+
+    /**
+     * 递归删除目录及其所有子文件和子目录（加固版）
+     * <p>
+     * B4-05 加固改进：
+     * </p>
+     * <ol>
+     *   <li>每个文件/目录通过 {@link #deleteFileWithRetry(Path)} 删除，含重试机制</li>
+     *   <li>不再静默吞掉失败 — 返回所有删除失败的路径列表</li>
+     *   <li>空列表表示完全清理成功，非空列表表示有残留</li>
+     * </ol>
      * <p>
      * 使用 Java NIO 的 walk() 方法遍历目录树，
      * 先删除所有文件（深度优先），最后删除空目录。
      * </p>
      *
      * @param directory 要删除的目录路径
-     * @throws IOException 如果删除过程中发生 I/O 错误
+     * @return 删除失败的路径列表（空列表 = 完全清理成功）
      */
-    private void deleteDirectory(Path directory) throws IOException {
+    private List<String> deleteDirectory(Path directory) {
+        List<String> failures = new java.util.ArrayList<>();
         if (Files.exists(directory)) {
             try (Stream<Path> pathStream = Files.walk(directory)) {
                 // 按深度降序排列，先删除子文件/子目录，再删除父目录
                 pathStream.sorted(Comparator.reverseOrder())
                         .forEach(path -> {
-                            try {
-                                Files.deleteIfExists(path);
-                            } catch (IOException e) {
-                                log.warn("删除文件失败: {}", path, e);
+                            if (!deleteFileWithRetry(path)) {
+                                failures.add(path.toString());
                             }
                         });
+            } catch (IOException e) {
+                log.warn("遍历目录失败: {}", directory, e);
+                failures.add(directory.toString());
             }
         }
+        return failures;
     }
 
 

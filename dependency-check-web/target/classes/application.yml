@@ -42,6 +42,9 @@ dependency-check:
 app:
   upload-dir: ./uploads
   report-dir: ./reports
+  # C4 修复（7/3）：CORS 跨域来源配置，开发环境默认 localhost:5173
+  cors:
+    allowed-origin: http://localhost:5173
 
 # 异步任务线程池配置
 task:

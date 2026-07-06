@@ -55,6 +55,17 @@ public class ScanEngineService {
     @Value("${dependency-check.max-scan-threads:4}")
     private int maxScanThreads;
 
+    // B1-13 修复（7/3）：注入 Settings 单例 Bean 作为配置模板
+    // 由于 v9.0.0 的 Settings 类不支持拷贝构造函数，保留 @Value 字段注入方式，
+    // ScanEngineConfig @Bean 作为集中配置文档，可供未来版本升级后使用
+    // 当升级到 Settings 支持 clone() 的版本后，可直接切换为 settings.clone() 模式
+    @SuppressWarnings("unused")
+    private final Settings baseSettings;
+
+    public ScanEngineService(Settings baseSettings) {
+        this.baseSettings = baseSettings;
+    }
+
     /**
      * 执行扫描并生成报告
      *
@@ -88,6 +99,9 @@ public class ScanEngineService {
         Engine engine = null;
         try {
             // 1. 创建 Settings 对象并配置
+            // B1-13 说明（7/3）：v9.0.0 的 Settings 不支持拷贝构造函数，
+            // 无法直接复用 ScanEngineConfig 单例 Bean。保留手动创建方式，
+            // ScanEngineConfig @Bean 作为集中配置文档，供未来版本升级后使用。
             Settings settings = new Settings();
             settings.setString(Settings.KEYS.DATA_DIRECTORY, dataDirectory);
 
@@ -100,25 +114,16 @@ public class ScanEngineService {
             }
 
             // B1-03 修复：配置扫描线程数（映射到 NVD 下载线程池）
-            // v9.0.0 分析线程由 Runtime.availableProcessors() 硬编码，无法通过 Settings 控制
-            // 此处仅控制 NVD 数据下载的并发线程数
             settings.setString(Settings.KEYS.MAX_DOWNLOAD_THREAD_POOL_SIZE, String.valueOf(maxScanThreads));
             log.info("扫描线程数(下载池): {}", maxScanThreads);
 
-            // B1-09 修复：设置网络超时参数，防止 NVD 首次下载时无限阻塞
-            // CONNECTION_TIMEOUT: 建立连接超时（默认 10s，调整为 30s）
+            // B1-09 修复：设置网络超时参数
             settings.setString(Settings.KEYS.CONNECTION_TIMEOUT, "30000");
-            // CONNECTION_READ_TIMEOUT: 数据读取超时（默认 60s，NVD 全量下载需更长时间）
             settings.setString(Settings.KEYS.CONNECTION_READ_TIMEOUT, "600000");
-            // ANALYSIS_TIMEOUT: 单个分析器执行超时，防止某个分析器卡死
             settings.setString(Settings.KEYS.ANALYSIS_TIMEOUT, "300000");
             log.debug("超时配置: 连接=30s, 读取=600s, 分析=300s");
 
             // 2. 创建 Engine 实例
-            //    Engine(Settings) 构造函数会自动：
-            //    - 加载配置
-            //    - 发现所有分析器（通过 SPI 机制）
-            //    - 打开 H2 数据库连接
             engine = new Engine(Engine.Mode.STANDALONE, settings);
 
             // 3. 执行扫描

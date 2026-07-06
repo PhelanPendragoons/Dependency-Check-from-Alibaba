@@ -199,7 +199,8 @@ public class ReportService {
 
         } catch (Exception e) {
             log.error("Excel 报告生成失败: taskId={}", taskId, e);
-            throw new BusinessException("Excel 报告生成失败: " + e.getMessage());
+            // C1 修复：脱敏处理，不暴露内部异常消息（可能包含文件路径）
+            throw new BusinessException("Excel 报告生成失败，请查看系统日志");
         }
     }
 
@@ -488,7 +489,8 @@ public class ReportService {
 
         } catch (Exception e) {
             log.error("PDF 报告生成失败: taskId={}", taskId, e);
-            throw new BusinessException("PDF 报告生成失败: " + e.getMessage());
+            // C1 修复：脱敏处理，不暴露内部异常消息（可能包含文件路径）
+            throw new BusinessException("PDF 报告生成失败，请查看系统日志");
         }
     }
 
