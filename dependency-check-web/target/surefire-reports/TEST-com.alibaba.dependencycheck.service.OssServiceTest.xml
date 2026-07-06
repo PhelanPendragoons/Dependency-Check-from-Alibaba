@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.064" tests="9" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.alibaba.dependencycheck.service.OssServiceTest" time="2.302" tests="21" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -58,19 +58,49 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="61.0"/>
   </properties>
-  <testcase name="getResults_shouldReturnResults" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.032"/>
-  <testcase name="getTask_shouldReturnCorrectTask" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.008"/>
-  <testcase name="getTask_shouldThrowExceptionWhenNotExists" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.002"/>
-  <testcase name="createTask_shouldThrowExceptionWhenProjectNotExists" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.002"/>
-  <testcase name="getResults_shouldThrowExceptionWhenTaskNotExists" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.002"/>
-  <testcase name="getResults_shouldReturnEmptyListWhenNoResults" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.001"/>
-  <testcase name="createTask_shouldInitializeStatusAsPending" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.009">
-    <system-out><![CDATA[18:11:03.244 [main] INFO com.alibaba.dependencycheck.service.ScanTaskService -- 扫描任务创建成功: taskId=10, projectId=1
+  <testcase name="exists_shouldReturnFalseWhenOssUnavailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="1.961"/>
+  <testcase name="exists_shouldReturnFalseWhenFileNotExist" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.029"/>
+  <testcase name="upload_shouldReturnFalseOnOssException" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.12">
+    <system-out><![CDATA[18:11:02.300 [main] WARN com.alibaba.dependencycheck.service.OssService -- OSS 上传失败（服务端错误）: key=reports/1/dependency-check-report.html, code=null, message=null
 ]]></system-out>
   </testcase>
-  <testcase name="createTask_shouldSucceedWhenNoActiveTask" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.002">
-    <system-out><![CDATA[18:11:03.247 [main] INFO com.alibaba.dependencycheck.service.ScanTaskService -- 扫描任务创建成功: taskId=10, projectId=1
+  <testcase name="getObjectUrl_shouldReturnNullWhenOssUnavailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.005"/>
+  <testcase name="exists_shouldReturnOssClientResult" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.025"/>
+  <testcase name="buildReportKey_shouldGenerateCorrectKey" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.011"/>
+  <testcase name="upload_shouldReturnFalseOnRuntimeException" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.006">
+    <system-out><![CDATA[18:11:02.366 [main] WARN com.alibaba.dependencycheck.service.OssService -- OSS 上传失败（客户端/网络错误）: key=reports/1/dependency-check-report.html, message=Network error
 ]]></system-out>
   </testcase>
-  <testcase name="createTask_shouldRejectWhenActiveTaskExists" classname="com.alibaba.dependencycheck.service.ScanTaskServiceTest" time="0.002"/>
+  <testcase name="delete_shouldReturnFalseWhenOssUnavailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002"/>
+  <testcase name="download_shouldReturnStreamWhenFileExists" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.058">
+    <system-out><![CDATA[18:11:02.425 [main] INFO com.alibaba.dependencycheck.service.OssService -- OSS 下载成功: bucket=test-bucket, key=reports/1/dependency-check-report.html, size=100
+]]></system-out>
+  </testcase>
+  <testcase name="upload_shouldSucceedWhenOssAvailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.004">
+    <system-out><![CDATA[18:11:02.430 [main] INFO com.alibaba.dependencycheck.service.OssService -- OSS 上传成功: bucket=test-bucket, key=reports/1/dependency-check-report.html
+]]></system-out>
+  </testcase>
+  <testcase name="buildReportKey_shouldHandleExcelFileName" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002"/>
+  <testcase name="download_shouldReturnNullOnException" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002">
+    <system-out><![CDATA[18:11:02.437 [main] WARN com.alibaba.dependencycheck.service.OssService -- OSS 下载失败（客户端/网络错误）: key=reports/1/dependency-check-report.html, message=Network error
+]]></system-out>
+  </testcase>
+  <testcase name="isAvailable_shouldReturnTrueWhenBothPresent" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.001"/>
+  <testcase name="upload_shouldReturnFalseWhenOssUnavailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.001"/>
+  <testcase name="download_shouldReturnNullWhenFileNotExists" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002"/>
+  <testcase name="delete_shouldSucceedWhenOssAvailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.003">
+    <system-out><![CDATA[18:11:02.449 [main] INFO com.alibaba.dependencycheck.service.OssService -- OSS 删除成功: bucket=test-bucket, key=reports/1/dependency-check-report.html
+]]></system-out>
+  </testcase>
+  <testcase name="exists_shouldReturnFalseOnException" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.003">
+    <system-out><![CDATA[18:11:02.453 [main] WARN com.alibaba.dependencycheck.service.OssService -- OSS exists 查询失败（客户端/网络错误）: key=reports/1/dependency-check-report.html, message=Network error
+]]></system-out>
+  </testcase>
+  <testcase name="download_shouldReturnNullWhenOssUnavailable" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002"/>
+  <testcase name="delete_shouldReturnFalseOnException" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.003">
+    <system-out><![CDATA[18:11:02.459 [main] WARN com.alibaba.dependencycheck.service.OssService -- OSS 删除失败（客户端/网络错误）: key=reports/1/dependency-check-report.html, message=Network error
+]]></system-out>
+  </testcase>
+  <testcase name="isAvailable_shouldReturnFalseWhenClientNull" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.002"/>
+  <testcase name="getObjectUrl_shouldGenerateCorrectUrl" classname="com.alibaba.dependencycheck.service.OssServiceTest" time="0.007"/>
 </testsuite>
