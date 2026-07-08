@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -16,11 +17,14 @@ import org.springframework.stereotype.Service;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -50,6 +54,17 @@ public class ReportService {
     @Value("${app.report-dir:./reports}")
     private String reportDir;
 
+    /**
+     * OSS 服务（可选注入）。
+     * <p>
+     * D4-07（7/8）：当 {@code app.oss.enabled=false} 时，
+     * {@link com.alibaba.dependencycheck.config.OssConfig} 不创建 Bean，
+     * 此字段为 {@code null}，所有 OSS 逻辑自动跳过，走纯本地存储。
+     * </p>
+     */
+    @Autowired(required = false)
+    private OssService ossService;
+
     // ==================== 通用方法 ====================
 
     /**
@@ -59,7 +74,7 @@ public class ReportService {
      * @return 报告文件的绝对路径
      */
     public String getReportPath(Long taskId) {
-        String reportFilePath = reportDir + File.separator + taskId + File.separator + "dependency-check-report.html";
+        String reportFilePath = getHtmlReportPath(taskId);
         Path path = Paths.get(reportFilePath);
 
         if (!Files.exists(path)) {
@@ -94,7 +109,11 @@ public class ReportService {
     // ==================== 多格式报告支持 ====================
 
     /**
-     * 按格式获取报告资源
+     * 按格式获取报告资源（D4-08，7/8：支持 OSS 回源下载）
+     * <p>
+     * 报告获取优先级：本地文件 → OSS 下载 → 抛出异常。
+     * OSS 路由对 Controller 层完全透明 — 调用方无需感知存储后端。
+     * </p>
      *
      * @param taskId 扫描任务 ID
      * @param format 报告格式（html / excel / pdf）
@@ -102,20 +121,51 @@ public class ReportService {
      */
     public Resource getReportResource(Long taskId, String format) {
         String filePath;
+        String fileName;
         switch (format.toLowerCase()) {
             case "html":
-                filePath = getReportPath(taskId);
+                filePath = getHtmlReportPath(taskId);
+                fileName = "dependency-check-report.html";
                 break;
             case "excel":
                 filePath = getExcelReportPath(taskId);
+                fileName = "dependency-check-report-" + taskId + ".xlsx";
                 break;
             case "pdf":
                 filePath = getPdfReportPath(taskId);
+                fileName = "dependency-check-report-" + taskId + ".pdf";
                 break;
             default:
                 throw new BusinessException("不支持的报告格式: " + format);
         }
-        return new FileSystemResource(filePath);
+
+        // 1. 本地文件存在 → 直接返回（快速路径）
+        Path localPath = Paths.get(filePath);
+        if (Files.exists(localPath)) {
+            return new FileSystemResource(localPath.toFile());
+        }
+
+        // 2. 本地不存在 + OSS 可用 → 从 OSS 下载到本地（回源）
+        if (ossService != null && ossService.isAvailable()) {
+            String objectKey = ossService.buildReportKey(taskId, fileName);
+            try {
+                InputStream is = ossService.download(objectKey);
+                if (is != null) {
+                    try (is) {
+                        Files.createDirectories(localPath.getParent());
+                        Files.copy(is, localPath, StandardCopyOption.REPLACE_EXISTING);
+                        log.info("从 OSS 回源报告到本地: taskId={}, format={}, key={}",
+                                taskId, format, objectKey);
+                        return new FileSystemResource(localPath.toFile());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("从 OSS 下载报告失败（回退到异常处理）: taskId={}, format={}", taskId, format, e);
+            }
+        }
+
+        // 3. 本地和 OSS 都没有 → 抛出异常
+        throw new BusinessException("报告文件不存在: taskId=" + taskId);
     }
 
     /**
@@ -195,6 +245,10 @@ public class ReportService {
             }
 
             log.info("Excel 报告生成成功: taskId={}, path={}", taskId, excelPath);
+
+            // D4-07（7/8）：Excel 报告写入本地后，异步上传 OSS
+            uploadReportToOss(taskId, excelPath, "dependency-check-report-" + taskId + ".xlsx");
+
             return excelPath;
 
         } catch (Exception e) {
@@ -485,6 +539,10 @@ public class ReportService {
             }
 
             log.info("PDF 报告生成成功: taskId={}, path={}", taskId, pdfPath);
+
+            // D4-07（7/8）：PDF 报告写入本地后，异步上传 OSS
+            uploadReportToOss(taskId, pdfPath, "dependency-check-report-" + taskId + ".pdf");
+
             return pdfPath;
 
         } catch (Exception e) {
@@ -500,5 +558,46 @@ public class ReportService {
     private String getPdfReportPath(Long taskId) {
         return reportDir + File.separator + taskId + File.separator
                 + "dependency-check-report-" + taskId + ".pdf";
+    }
+
+    // ==================== OSS 集成方法（D4-07/D4-08，7/8） ====================
+
+    /**
+     * 上传报告文件到 OSS（D4-07，7/8）
+     * <p>
+     * OSS 未启用或上传失败时静默返回，不抛出异常。
+     * 本地文件作为降级兜底始终可用，OSS 上传失败不影响报告生成流程。
+     * </p>
+     *
+     * @param taskId   扫描任务 ID
+     * @param filePath 本地报告文件路径
+     * @param fileName 报告文件名（用于构建 OSS Object Key）
+     */
+    private void uploadReportToOss(Long taskId, String filePath, String fileName) {
+        if (ossService == null || !ossService.isAvailable()) {
+            return;
+        }
+
+        try (FileInputStream fis = new FileInputStream(filePath)) {
+            String key = ossService.buildReportKey(taskId, fileName);
+            boolean uploaded = ossService.upload(fis, key);
+            if (uploaded) {
+                log.info("报告已上传至 OSS: taskId={}, fileName={}, key={}", taskId, fileName, key);
+            }
+        } catch (Exception e) {
+            log.warn("OSS 上传报告失败（不影响本地文件，本地降级仍可用）: taskId={}, fileName={}",
+                    taskId, fileName, e);
+        }
+    }
+
+    /**
+     * 获取 HTML 报告文件路径（不检查存在性）
+     * <p>
+     * D4-08（7/8）：从原 {@link #getReportPath(Long)} 中提取纯路径构建逻辑，
+     * 供 OSS 下载 fallback 使用。原方法保留向后兼容。
+     * </p>
+     */
+    private String getHtmlReportPath(Long taskId) {
+        return reportDir + File.separator + taskId + File.separator + "dependency-check-report.html";
     }
 }

@@ -6,10 +6,15 @@ import com.alibaba.dependencycheck.model.entity.ScanResult;
 import com.alibaba.dependencycheck.model.entity.ScanTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.FileInputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -51,6 +56,17 @@ public class ScanTaskExecutorService {
     private final ScanResultMapper scanResultMapper;
 
     /**
+     * OSS 服务（可选注入）。
+     * <p>
+     * D4-06（7/8）：当 {@code app.oss.enabled=false} 时，
+     * {@link com.alibaba.dependencycheck.config.OssConfig} 不创建 Bean，
+     * 此字段为 {@code null}，所有 OSS 相关逻辑自动跳过。
+     * </p>
+     */
+    @Autowired(required = false)
+    private OssService ossService;
+
+    /**
      * 异步执行扫描任务
      * <p>
      * 使用 {@code @Async("scanTaskExecutor")} 注解，方法会在独立的线程池中执行。
@@ -85,6 +101,10 @@ public class ScanTaskExecutorService {
             // 执行扫描（调用 ScanEngineService）
             List<org.owasp.dependencycheck.dependency.Dependency> dependencies =
                     scanEngineService.scan(scanPath, taskReportDir);
+
+            // D4-06（7/8）：扫描完成后上传 HTML 报告到 OSS
+            // OSS 上传失败不阻塞扫描流程 — 本地文件已存在作为降级兜底
+            uploadHtmlReportToOss(taskId, taskReportDir);
 
             // B3-09 修复：扫描完成后进度更新为 90%（保存结果中）
             ScanTask progressTask = new ScanTask();
@@ -207,6 +227,38 @@ public class ScanTaskExecutorService {
                     return result;
                 })
                 .toList();
+    }
+
+    /**
+     * 上传 HTML 报告到 OSS（D4-06，7/8）
+     * <p>
+     * OSS 未启用或上传失败时静默返回，不抛出异常，确保扫描主流程不受影响。
+     * 本地文件作为降级兜底始终可用。
+     * </p>
+     *
+     * @param taskId        扫描任务 ID
+     * @param taskReportDir 报告输出目录（HTML 报告由 engine.writeReports() 生成在此）
+     */
+    private void uploadHtmlReportToOss(Long taskId, String taskReportDir) {
+        if (ossService == null || !ossService.isAvailable()) {
+            return;
+        }
+
+        Path htmlFile = Paths.get(taskReportDir, "dependency-check-report.html");
+        if (!Files.exists(htmlFile)) {
+            log.debug("HTML 报告文件不存在，跳过 OSS 上传: {}", htmlFile);
+            return;
+        }
+
+        try (FileInputStream fis = new FileInputStream(htmlFile.toFile())) {
+            String key = ossService.buildReportKey(taskId, "dependency-check-report.html");
+            boolean uploaded = ossService.upload(fis, key);
+            if (uploaded) {
+                log.info("HTML 报告已上传至 OSS: taskId={}, key={}", taskId, key);
+            }
+        } catch (Exception e) {
+            log.warn("OSS 上传 HTML 报告失败（不影响扫描结果，本地文件可用作降级）: taskId={}", taskId, e);
+        }
     }
 
 }
