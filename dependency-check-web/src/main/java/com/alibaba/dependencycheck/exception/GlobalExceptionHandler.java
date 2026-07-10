@@ -103,6 +103,34 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * E2E-B2: 处理缺少上传文件异常
+     * <p>
+     * 当 POST /api/projects 缺少 file 参数（multipart form-data part）时触发。
+     * 与 {@link #handleMissingParam} 不同，此处理器专门针对 multipart 请求中的文件部件缺失。
+     * </p>
+     */
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleMissingFilePart(org.springframework.web.multipart.support.MissingServletRequestPartException e) {
+        String message = "缺少必填文件: " + e.getRequestPartName();
+        log.warn("缺少上传文件: {}", message);
+        return Result.error(400, message);
+    }
+
+    /**
+     * E2E-B2: 处理非 multipart 请求异常
+     * <p>
+     * 当上传接口收到非 multipart/form-data 请求时触发。
+     * </p>
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleMultipartException(org.springframework.web.multipart.MultipartException e) {
+        log.warn("文件上传请求格式错误: {}", e.getMessage());
+        return Result.error(400, "文件上传请求格式错误，请使用 multipart/form-data 格式");
+    }
+
+    /**
      * C2-04: 处理文件上传大小超限异常
      * <p>
      * 当上传文件超过 multipart.max-file-size 配置时触发。

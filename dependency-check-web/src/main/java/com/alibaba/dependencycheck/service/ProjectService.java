@@ -70,6 +70,12 @@ public class ProjectService {
     /** B4-05: 文件删除重试间隔（毫秒），应对 Windows 文件锁延迟 */
     private static final long DELETE_RETRY_DELAY_MS = 100;
 
+    /** B4-05#4: ZIP 文件独立存储目录，与项目解压目录物理隔离
+     * <p>ZIP 存放在项目目录内部时，若 ZIP 被占用无法删除会连累整个项目目录残留。
+     * 改为独立目录后，ZIP 删除失败不影响项目目录清理。命名使用已通过
+     * {@link #validateProjectName} 校验的 name，安全可靠。</p> */
+    private static final String ZIP_DIR = "./uploads/_zips";
+
     // ==================== B4 安全校验方法 ====================
 
     /**
@@ -155,21 +161,26 @@ public class ProjectService {
         }
 
         // 4. 保存上传的 ZIP 文件
-        String zipPath = projectDir + File.separator + originalFilename;
-        file.transferTo(new File(zipPath));
+        // B4-05#4: ZIP 独立存储到 _zips/ 目录，与解压目录物理隔离
+        // 使用绝对路径避免 Tomcat DiskFileItem.write() 解析相对路径时的 CWD 不一致问题
+        Path zipsDir = Paths.get(ZIP_DIR).toAbsolutePath();
+        if (!Files.exists(zipsDir)) {
+            Files.createDirectories(zipsDir);
+        }
+        Path zipPath = zipsDir.resolve(name + ".zip");
+        file.transferTo(zipPath.toFile());
 
         // 5. 解压 ZIP 文件
         // B4-05: Zip Slip 检测到后清理恶意 ZIP 和已解压文件
         try {
-            unzip(zipPath, projectDir);
+            unzip(zipPath.toString(), projectDir);
         } catch (BusinessException e) {
             // B4-05: 清理恶意 ZIP 文件和已解压目录（加固版，含重试和失败收集）
             java.util.List<String> cleanupFailures = new java.util.ArrayList<>();
 
             // 清理恶意 ZIP 文件（带重试）
-            Path zipPathObj = Paths.get(zipPath);
-            if (!deleteFileWithRetry(zipPathObj)) {
-                cleanupFailures.add(zipPath);
+            if (!deleteFileWithRetry(zipPath)) {
+                cleanupFailures.add(zipPath.toString());
             } else {
                 log.info("已删除恶意ZIP文件: {}", zipPath);
             }
@@ -188,6 +199,13 @@ public class ProjectService {
             if (!cleanupFailures.isEmpty()) {
                 log.error("B4-05 清理不彻底！以下 {} 个文件/目录可能残留: {}",
                         cleanupFailures.size(), cleanupFailures);
+            }
+
+            // B4-05#3: 顶层事后验证 — 确认项目目录是否已完全清理
+            // 即使 deleteDirectory 返回空列表，也做最终 Files.exists 确认，
+            // 防止边缘情况（文件系统延迟、返回列表为空但目录仍存在）产生静默残留
+            if (Files.exists(projectPath)) {
+                log.error("B4-05 顶层验证失败：项目目录清理后仍存在残留: {}", projectPath.toAbsolutePath());
             }
             throw e;
         }
@@ -296,6 +314,23 @@ public class ProjectService {
                 log.info("已清理项目物理文件: {}", project.getFilePath());
             } else {
                 log.warn("清理项目物理文件不彻底，{} 个文件/目录残留: {}", failures.size(), failures);
+            }
+
+            // B4-05#3: 顶层事后验证 — 确认项目目录是否已完全清理
+            // deleteDirectory 返回空列表不能保证目录真正消失（边缘情况），
+            // 使用 Files.exists 做最终确认，防止静默残留
+            if (Files.exists(projectPath)) {
+                log.error("B4-05 顶层验证失败：项目目录删除后仍存在残留: {}", projectPath.toAbsolutePath());
+            }
+        }
+
+        // B4-05#4: 清理独立存储的 ZIP 文件（与项目目录物理隔离，互不影响）
+        Path zipFile = Paths.get(ZIP_DIR + File.separator + project.getName() + ".zip");
+        if (Files.exists(zipFile)) {
+            if (deleteFileWithRetry(zipFile)) {
+                log.debug("已清理独立ZIP文件: {}", zipFile);
+            } else {
+                log.warn("清理独立ZIP文件失败（不影响项目目录）: {}", zipFile);
             }
         }
     }

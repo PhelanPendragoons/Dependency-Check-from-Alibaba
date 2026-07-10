@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 扫描任务执行器
@@ -77,6 +78,16 @@ public class ScanTaskExecutorService {
      * @param scanPath     待扫描的文件/目录路径
      * @param taskReportDir 报告输出目录
      */
+    /**
+     * P1#105：任务取消请求标记表。
+     * <p>
+     * Key = taskId, Value = true（已请求取消）。
+     * executeScan 在关键节点检查此标记，若已取消则跳过结果持久化。
+     * 任务完成/失败后从表中移除。
+     * </p>
+     */
+    private final ConcurrentHashMap<Long, Boolean> cancelRequests = new ConcurrentHashMap<>();
+
     /** B3-06: 通用错误码，用于脱敏处理 */
     private static final String SCAN_ERROR_PREFIX = "SCAN_ERR";
 
@@ -90,6 +101,13 @@ public class ScanTaskExecutorService {
         }
 
         try {
+            // P1#105: 检查是否在执行前已被取消（PENDING 状态时被取消）
+            if (cancelRequests.containsKey(taskId)) {
+                log.info("扫描任务 {} 已被取消，跳过执行", taskId);
+                cancelRequests.remove(taskId);
+                return;
+            }
+
             // B3-09 修复：更新任务状态为"运行中"，进度设为 10%（开始扫描）
             ScanTask runningTask = new ScanTask();
             runningTask.setId(task.getId());
@@ -101,6 +119,14 @@ public class ScanTaskExecutorService {
             // 执行扫描（调用 ScanEngineService）
             List<org.owasp.dependencycheck.dependency.Dependency> dependencies =
                     scanEngineService.scan(scanPath, taskReportDir);
+
+            // P1#105: 扫描完成后检查取消标记，跳过结果持久化
+            if (cancelRequests.containsKey(taskId)) {
+                log.info("扫描任务 {} 在扫描完成后被取消，跳过结果保存", taskId);
+                // OSS 报告仍上传（已完成，无需回滚），但结果不入库
+                cancelRequests.remove(taskId);
+                return;
+            }
 
             // D4-06（7/8）：扫描完成后上传 HTML 报告到 OSS
             // OSS 上传失败不阻塞扫描流程 — 本地文件已存在作为降级兜底
@@ -124,7 +150,6 @@ public class ScanTaskExecutorService {
                 }
             }
 
-
             // 更新任务状态为"完成"
             task.setStatus("COMPLETED");
             task.setProgress(100);
@@ -136,6 +161,13 @@ public class ScanTaskExecutorService {
             log.info("扫描任务 {} 完成，共 {} 个依赖，{} 个有漏洞", taskId, dependencies.size(), vulnCount);
 
         } catch (Exception e) {
+            // P1#105: 先读 DB 确认当前状态 — 若已被取消则不覆盖为 FAILED
+            ScanTask currentTask = scanTaskMapper.selectById(taskId);
+            if (currentTask != null && "CANCELLED".equals(currentTask.getStatus())) {
+                log.info("扫描任务 {} 已被取消（DB 状态为 CANCELLED），跳过 FAILED 覆盖", taskId);
+                cancelRequests.remove(taskId);
+                return;
+            }
             log.error("扫描任务 {} 失败", taskId, e);
             task.setStatus("FAILED");
             // B3-06 修复：脱敏处理 — 不直接暴露原始异常消息（可能含内部路径）
@@ -143,6 +175,9 @@ public class ScanTaskExecutorService {
             task.setErrorMessage(SCAN_ERROR_PREFIX + "_" + taskId + ": 扫描执行失败，请查看系统日志");
             task.setCompletedAt(LocalDateTime.now());
             scanTaskMapper.updateById(task);
+        } finally {
+            // P1#105: 清理取消标记
+            cancelRequests.remove(taskId);
         }
     }
 
@@ -259,6 +294,53 @@ public class ScanTaskExecutorService {
         } catch (Exception e) {
             log.warn("OSS 上传 HTML 报告失败（不影响扫描结果，本地文件可用作降级）: taskId={}", taskId, e);
         }
+    }
+
+    /**
+     * P1#105：请求取消指定的扫描任务。
+     * <p>
+     * 取消逻辑：
+     * <ol>
+     *   <li>设置 cancelRequests 标记，executeScan 在关键节点检查此标记</li>
+     *   <li>更新 DB 状态为 CANCELLED（仅当当前状态为 PENDING 或 RUNNING）</li>
+     *   <li>executeScan 的 catch 块读取 DB 状态，CANCELLED 时不覆盖为 FAILED</li>
+     * </ol>
+     * </p>
+     * <p>
+     * <b>注意：</b>此方法不强制中断执行中的扫描线程（OWASP Engine 不支持中断），
+     * 而是通过标记+状态保护实现"逻辑取消"。扫描可能继续在后台运行到完成，
+     * 但结果不会被持久化，DB 状态保持 CANCELLED。
+     * </p>
+     *
+     * @param taskId 要取消的任务 ID
+     * @return true 如果取消请求已发出
+     */
+    public boolean cancelScan(Long taskId) {
+        ScanTask task = scanTaskMapper.selectById(taskId);
+        if (task == null) {
+            log.warn("取消扫描失败：任务不存在 taskId={}", taskId);
+            return false;
+        }
+
+        String currentStatus = task.getStatus();
+        if (!"PENDING".equals(currentStatus) && !"RUNNING".equals(currentStatus)) {
+            log.warn("取消扫描失败：任务状态不允许取消 taskId={}, status={}", taskId, currentStatus);
+            return false;
+        }
+
+        // 设置取消标记
+        cancelRequests.put(taskId, true);
+        log.info("已设置取消标记: taskId={}", taskId);
+
+        // 更新 DB 状态为 CANCELLED
+        ScanTask update = new ScanTask();
+        update.setId(taskId);
+        update.setStatus("CANCELLED");
+        update.setCompletedAt(LocalDateTime.now());
+        scanTaskMapper.updateById(update);
+        log.info("扫描任务已取消: taskId={}", taskId);
+
+        return true;
     }
 
 }

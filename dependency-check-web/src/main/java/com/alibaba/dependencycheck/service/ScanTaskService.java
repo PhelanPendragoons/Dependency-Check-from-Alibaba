@@ -92,6 +92,38 @@ public class ScanTaskService {
     }
 
     /**
+     * P1#105：取消扫描任务。
+     * <p>
+     * 仅 PENDING 或 RUNNING 状态的任务可以被取消。
+     * 委托 {@link ScanTaskExecutorService#cancelScan(Long)} 执行实际的取消逻辑。
+     * </p>
+     *
+     * @param taskId 任务 ID
+     * @return 更新后的任务 DTO
+     * @throws BusinessException 如果任务不存在或状态不允许取消
+     */
+    public ScanTaskDTO cancelTask(Long taskId) {
+        ScanTask task = scanTaskMapper.selectById(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在: " + taskId);
+        }
+
+        String status = task.getStatus();
+        if (!"PENDING".equals(status) && !"RUNNING".equals(status)) {
+            throw new BusinessException("当前状态不允许取消: " + status + "（仅 PENDING 或 RUNNING 可取消）");
+        }
+
+        boolean cancelled = scanTaskExecutorService.cancelScan(taskId);
+        if (!cancelled) {
+            throw new BusinessException("取消任务失败: " + taskId);
+        }
+
+        // 重新查询获取最新状态
+        ScanTask updated = scanTaskMapper.selectById(taskId);
+        return convertToDTO(updated);
+    }
+
+    /**
      * 获取任务状态
      *
      * @param id 任务 ID

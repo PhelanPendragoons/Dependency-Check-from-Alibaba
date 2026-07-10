@@ -11,6 +11,7 @@ C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\s
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\service\ProjectService.java
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\model\dto\ScanResultDTO.java
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\DependencyCheckWebApplication.java
+C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\model\dto\UpdateProjectRequest.java
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\mapper\ScanTaskMapper.java
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\model\entity\ScanTask.java
 C:\Users\ROG\Desktop\VScode\Dependency-Check-from-Alibaba\dependency-check-web\src\main\java\com\alibaba\dependencycheck\mapper\ProjectMapper.java

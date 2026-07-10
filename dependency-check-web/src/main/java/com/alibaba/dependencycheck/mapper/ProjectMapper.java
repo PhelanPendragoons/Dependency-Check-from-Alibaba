@@ -3,6 +3,7 @@ package com.alibaba.dependencycheck.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.alibaba.dependencycheck.model.entity.Project;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 /**
@@ -22,6 +23,20 @@ public interface ProjectMapper extends BaseMapper<Project> {
      */
     @Select("SELECT * FROM project WHERE name = #{name} AND deleted = 0")
     Project findByName(String name);
+
+    /**
+     * P1#103：按名称查询但排除指定 ID（用于更新时的重名检查）
+     * <p>
+     * 与 {@link #findByName} 不同，此方法排除自身 ID，
+     * 避免更新项目名时因"同名"误报冲突。
+     * </p>
+     *
+     * @param name      项目名称
+     * @param excludeId 要排除的项目 ID（通常为当前正在更新的项目）
+     * @return 项目实体，不存在时返回 null
+     */
+    @Select("SELECT * FROM project WHERE name = #{name} AND id != #{excludeId} AND deleted = 0")
+    Project findByNameAndIdNot(@Param("name") String name, @Param("excludeId") Long excludeId);
 }
 
 

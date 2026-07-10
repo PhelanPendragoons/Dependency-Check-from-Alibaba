@@ -9,10 +9,10 @@
 -- 存储用户上传的项目信息
 CREATE TABLE IF NOT EXISTS project (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL COMMENT '项目名称',
+    name        VARCHAR(255) NOT NULL UNIQUE COMMENT '项目名称',
     description VARCHAR(1000) COMMENT '项目描述',
     file_path   VARCHAR(1000) COMMENT '项目文件存储路径',
-    file_type   VARCHAR(50)  DEFAULT 'ZIP' COMMENT '文件类型(ZIP/JAR/DIRECTORY)',
+    file_type   VARCHAR(50)  NOT NULL DEFAULT 'ZIP' COMMENT '文件类型(ZIP/JAR/DIRECTORY)',
     status      VARCHAR(50)  DEFAULT 'UPLOADED' COMMENT '状态(UPLOADED/SCANNING/COMPLETED/FAILED)',
     deleted     INT          DEFAULT 0 COMMENT '逻辑删除(0=未删除,1=已删除)',
     created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

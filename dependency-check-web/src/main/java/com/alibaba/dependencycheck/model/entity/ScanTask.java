@@ -3,6 +3,7 @@ package com.alibaba.dependencycheck.model.entity;
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -14,7 +15,9 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("scan_task")
-public class ScanTask {
+public class ScanTask implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @TableId(type = IdType.AUTO)
     private Long id;

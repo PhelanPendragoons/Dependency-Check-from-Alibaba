@@ -73,6 +73,23 @@ public class ScanTaskController {
     }
 
     /**
+     * P1#105：取消扫描任务。
+     * <p>
+     * 仅 PENDING 或 RUNNING 状态的任务可以被取消。
+     * 取消后任务状态变为 CANCELLED，扫描结果不会被持久化。
+     * </p>
+     *
+     * @param id 任务 ID
+     * @return 更新后的任务信息
+     */
+    @PostMapping("/{id}/cancel")
+    public Result<ScanTaskDTO> cancelTask(@PathVariable Long id) {
+        log.info("取消扫描任务: taskId={}", id);
+        ScanTaskDTO task = scanTaskService.cancelTask(id);
+        return Result.success(task);
+    }
+
+    /**
      * 获取扫描结果列表
      * <p>
      * 任务完成后调用此接口获取详细的扫描结果，
