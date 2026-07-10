@@ -12,7 +12,7 @@ export const useProjectStore = defineStore('project', {
       this.loading = true
       try {
         const res = await projectApi.list()
-        this.projects = res.data || []
+        this.projects = res.data?.records || []
       } finally {
         this.loading = false
       }

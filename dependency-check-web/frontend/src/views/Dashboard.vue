@@ -87,8 +87,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useTaskStore } from '@/stores/task'
+import { useProjectStore } from '@/stores/project'
 
 const taskStore = useTaskStore()
+const projectStore = useProjectStore()
 
 const stats = ref({
   totalProjects: 0,
@@ -122,9 +124,13 @@ const statusText = (status) => {
 }
 
 onMounted(async () => {
-  await taskStore.fetchTasks()
+  await Promise.all([
+    taskStore.fetchTasks(),
+    projectStore.fetchProjects(),
+  ])
   // 计算统计数据
   const tasks = taskStore.tasks
+  stats.value.totalProjects = projectStore.projects.length
   stats.value.totalTasks = tasks.length
   stats.value.totalVulnerabilities = tasks.reduce(
     (sum, t) => sum + (t.vulnerableDependencies || 0), 0
