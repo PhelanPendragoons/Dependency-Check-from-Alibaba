@@ -41,7 +41,7 @@ echo.
 echo 步骤 3: 编译 NVD 初始化程序
 echo.
 
-set JAR=dependency-check-web\target\dependency-check-web-1.0.0-SNAPSHOT.jar
+set JAR=dependency-check-web\target\dependency-check-web-1.0.0.jar
 
 "%JAVA%" -cp "%JAR%" --add-opens java.base/java.lang=ALL-UNNAMED NvdInit.java data\dc-cache 2>&1
 

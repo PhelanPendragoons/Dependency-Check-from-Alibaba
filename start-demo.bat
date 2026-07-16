@@ -8,15 +8,19 @@ echo.
 
 set JAVA_HOME=C:\Program Files\Java\zulu17.56.15-ca-jdk17.0.14-win_x64
 set JAVA=%JAVA_HOME%\bin\java
-set JAR=dependency-check-web\target\dependency-check-web-1.0.0-SNAPSHOT.jar
+set JAR=dependency-check-web\target\dependency-check-web-1.0.0.jar
 if not defined NVD_API_KEY (
     if exist dependency-check-web\nvd-api.properties (
         for /f "tokens=2 delims==" %%K in ('findstr /b "dependency-check.nvd-api-key" dependency-check-web\nvd-api.properties') do set NVD_API_KEY=%%K
     )
 )
 if not defined NVD_API_KEY (
-    echo [警告] 未找到 NVD API Key，扫描将无法更新 NVD 数据（已有缓存则不影响演示）
+    echo [提示] 未设置 NVD API Key（演示模式使用本地缓存，无需联网）
 )
+
+:: 演示模式：NVD 缓存已预热（data\dc-cache\odc.mv.db ~250MB），
+:: 关闭自动更新后扫描完全离线，不依赖 VPN / NVD API / 镜像服务
+set NVD_AUTO_UPDATE=false
 
 if not exist "%JAR%" (
     echo [错误] JAR 包不存在，正在构建...

@@ -19,6 +19,7 @@ import org.xhtmlrenderer.pdf.ITextRenderer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -140,9 +141,14 @@ public class ReportService {
         }
 
         // 1. 本地文件存在 → 直接返回（快速路径）
+        //    7/16：跳过 0 字节残留文件（生成中途失败会留下空文件），走重新生成
         Path localPath = Paths.get(filePath);
-        if (Files.exists(localPath)) {
-            return new FileSystemResource(localPath.toFile());
+        try {
+            if (Files.exists(localPath) && Files.size(localPath) > 0) {
+                return new FileSystemResource(localPath.toFile());
+            }
+        } catch (IOException e) {
+            log.warn("检查报告文件大小失败，尝试重新获取: {}", filePath, e);
         }
 
         // 2. 本地不存在 + OSS 可用 → 从 OSS 下载到本地（回源）
@@ -164,7 +170,18 @@ public class ReportService {
             }
         }
 
-        // 3. 本地和 OSS 都没有 → 抛出异常
+        // 3. Excel / PDF 为衍生格式 → 从扫描结果按需生成（7/16 修复：
+        //    此前 generateExcelReport/generatePdfReport 无调用方，两种格式永远 404）
+        if ("excel".equalsIgnoreCase(format)) {
+            generateExcelReport(taskId);
+            return new FileSystemResource(localPath.toFile());
+        }
+        if ("pdf".equalsIgnoreCase(format)) {
+            generatePdfReport(taskId);
+            return new FileSystemResource(localPath.toFile());
+        }
+
+        // 4. 本地和 OSS 都没有 → 抛出异常
         throw new BusinessException("报告文件不存在: taskId=" + taskId);
     }
 
@@ -178,12 +195,16 @@ public class ReportService {
         List<String> formats = new java.util.ArrayList<>();
         if (reportExists(taskId)) {
             formats.add("html");
-        }
-        if (Files.exists(Paths.get(getExcelReportPath(taskId)))) {
+            // 7/16：Excel / PDF 下载时按需生成，扫描完成即视为可用
             formats.add("excel");
-        }
-        if (Files.exists(Paths.get(getPdfReportPath(taskId)))) {
             formats.add("pdf");
+        } else {
+            if (Files.exists(Paths.get(getExcelReportPath(taskId)))) {
+                formats.add("excel");
+            }
+            if (Files.exists(Paths.get(getPdfReportPath(taskId)))) {
+                formats.add("pdf");
+            }
         }
         return formats;
     }
@@ -515,14 +536,24 @@ public class ReportService {
         String htmlPath = getReportPath(taskId);
 
         try {
-            // 2. 读取 HTML 内容
+            // 2. 读取 HTML 内容并规范化为 XHTML（7/16 修复：DC 生成的报告是 HTML5，
+            //    含未转义 & 等实体，Flying Saucer 的 XML 解析器直接解析会抛
+            //    SAXParseException；用 jsoup（DC core 传递依赖）转为合法 XHTML）
             String htmlContent = Files.readString(Paths.get(htmlPath));
+            org.jsoup.nodes.Document jsoupDoc = org.jsoup.Jsoup.parse(htmlContent);
+            // script 为数据节点，XML 输出不转义其中的 &&，且 PDF 渲染不执行 JS，直接移除
+            jsoupDoc.select("script").remove();
+            jsoupDoc.outputSettings()
+                    .syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml)
+                    .escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml)
+                    .charset("UTF-8");
+            String xhtmlContent = jsoupDoc.html();
 
             // 3. 创建 PDF 渲染器
             ITextRenderer renderer = new ITextRenderer();
 
-            // 4. 设置 HTML 内容
-            renderer.setDocumentFromString(htmlContent);
+            // 4. 设置 XHTML 内容
+            renderer.setDocumentFromString(xhtmlContent);
 
             // 5. 布局并生成 PDF
             renderer.layout();

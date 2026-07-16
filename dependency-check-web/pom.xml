@@ -14,7 +14,7 @@
 
     <groupId>com.alibaba.dependencycheck</groupId>
     <artifactId>dependency-check-web</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>Dependency Check Web</name>
     <description>应用依赖安全与合规分析平台</description>
 
@@ -74,17 +74,21 @@
             <version>7.1.0</version>
         </dependency>
 
-        <!-- Apache POI (Excel报告生成) -->
+        <!-- Apache POI (Excel报告生成)
+             7/16 修复：不可排除 xmlbeans — poi-ooxml-lite 的 schema 类依赖
+             org.apache.xmlbeans.XmlObject，排除后生成 Excel 抛 NoClassDefFoundError -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>${poi.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.xmlbeans</groupId>
-                    <artifactId>xmlbeans</artifactId>
-                </exclusion>
-            </exclusions>
+        </dependency>
+
+        <!-- 7/16 修复：POI 5.2.5 需要 commons-compress >= 1.25（putArchiveEntry 签名变更），
+             dependency-check-core 传递的 1.24.0 会抛 NoSuchMethodError -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.26.2</version>
         </dependency>
 
         <!-- Spring Boot Validation (参数校验) -->

@@ -49,6 +49,22 @@ public class ScanEngineService {
     @Value("${dependency-check.nvd-api-key:}")
     private String nvdApiKey;
 
+    // NVD Datafeed 镜像地址（7/16）：NVD API 直连被 Cloudflare 拦截（Java 客户端 520），
+    // 配置后引擎改从 datafeed（本地/镜像 HTTP 源）下载 NVD 数据，绕开 API 直连
+    // 格式示例：http://localhost:8888/nvdcve-2.0-{0}.json.gz（{0} 为年份占位符）
+    @Value("${dependency-check.nvd-datafeed-url:}")
+    private String nvdDatafeedUrl;
+
+    // NVD 自动更新开关（7/16）：缓存预热完成后可关闭（演示/离线场景），
+    // 避免每次扫描触发联网检查（默认 4 小时检查一次），网络不可用时导致扫描失败
+    @Value("${dependency-check.nvd-auto-update:true}")
+    private boolean nvdAutoUpdate;
+
+    // OSS Index 分析器开关（7/16）：Sonatype OSS Index 为在线服务，未配置账号时
+    // 大量依赖查询会触发 401 "Invalid credentials"，导致整个分析失败，默认关闭
+    @Value("${dependency-check.ossindex-enabled:false}")
+    private boolean ossIndexEnabled;
+
     // B1-03 修复：读取扫描线程数配置，映射到 NVD 下载线程池
     // 注意：v9.0.0 没有 MAX_SCAN_THREADS 键，分析线程由 Runtime.availableProcessors() 控制
     // 此处将配置值用于 NVD 数据下载线程池，减少网络资源竞争
@@ -112,6 +128,28 @@ public class ScanEngineService {
             } else {
                 log.warn("未配置 NVD API Key，NVD 数据更新可能较慢");
             }
+
+            // 配置 NVD Datafeed 镜像（如果设置）：优先于 API 直连，规避 Cloudflare 拦截
+            if (nvdDatafeedUrl != null && !nvdDatafeedUrl.isEmpty()) {
+                settings.setString(Settings.KEYS.NVD_API_DATAFEED_URL, nvdDatafeedUrl);
+                log.info("已配置 NVD Datafeed 镜像: {}", nvdDatafeedUrl);
+            }
+
+            // 配置 NVD 自动更新开关：关闭后完全使用本地缓存，不发起任何 NVD 网络请求
+            settings.setBoolean(Settings.KEYS.AUTO_UPDATE, nvdAutoUpdate);
+            if (!nvdAutoUpdate) {
+                log.info("NVD 自动更新已关闭，使用本地缓存数据");
+            }
+
+            // OSS Index 分析器：在线服务，无凭据时会导致分析失败，默认禁用
+            settings.setBoolean(Settings.KEYS.ANALYZER_OSSINDEX_ENABLED, ossIndexEnabled);
+            if (!ossIndexEnabled) {
+                log.info("OSS Index 分析器已禁用（漏洞检测使用 NVD 本地数据）");
+            }
+
+            // .NET Assembly 分析器：依赖本机 dotnet 运行时，缺失时初始化异常会导致
+            // 整个分析失败（7/16 实测）；本系统面向 Java 项目扫描，直接禁用
+            settings.setBoolean(Settings.KEYS.ANALYZER_ASSEMBLY_ENABLED, false);
 
             // B1-03 修复：配置扫描线程数（映射到 NVD 下载线程池）
             settings.setString(Settings.KEYS.MAX_DOWNLOAD_THREAD_POOL_SIZE, String.valueOf(maxScanThreads));

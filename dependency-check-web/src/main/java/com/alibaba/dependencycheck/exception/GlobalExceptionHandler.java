@@ -168,6 +168,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IOException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleIOException(IOException e) {
+        // 7/16 修复：客户端中断下载（浏览器取消/网络超时）时响应流已不可写，
+        // 再返回 JSON 会二次抛 HttpMessageNotWritableException（No converter for
+        // Result with preset Content-Type 'text/html'）。此类情况仅记 warn，不写响应体
+        if (e instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException
+                || "org.apache.catalina.connector.ClientAbortException".equals(e.getClass().getName())) {
+            log.warn("客户端中断连接（下载取消/超时）: {}", e.getMessage());
+            return null;
+        }
         log.error("文件操作异常", e);
         return Result.error(500, "文件操作失败，请稍后重试");
     }

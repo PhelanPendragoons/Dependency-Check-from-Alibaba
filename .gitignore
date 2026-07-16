@@ -3,9 +3,10 @@
 **/dist/
 **/node_modules/
 
-# ===== 运行时数据（H2 库 / NVD 缓存 / 上传文件 / 日志）=====
+# ===== 运行时数据（H2 库 / NVD 缓存 / 上传文件 / 报告 / 日志）=====
 dependency-check-web/data/
 dependency-check-web/uploads/
+dependency-check-web/reports/
 logs/
 *.log
 *.mv.db

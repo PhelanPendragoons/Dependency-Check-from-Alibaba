@@ -37,6 +37,13 @@ mybatis-plus:
 dependency-check:
   data-directory: ./data/dc-cache
   nvd-api-key: ${NVD_API_KEY:}
+  # NVD Datafeed 镜像（7/16）：NVD API 直连被 Cloudflare 拦截时的替代数据源
+  # 格式：http://host/path/nvdcve-2.0-{0}.json.gz（{0} 为年份占位符），同目录需有 cache.properties
+  nvd-datafeed-url: ${NVD_DATAFEED_URL:}
+  # NVD 自动更新开关：缓存预热完成后可设为 false（演示/离线场景），扫描不再联网检查
+  nvd-auto-update: ${NVD_AUTO_UPDATE:true}
+  # Sonatype OSS Index 在线分析器：无账号时大量查询触发 401 导致扫描失败，默认关闭
+  ossindex-enabled: ${OSSINDEX_ENABLED:false}
   max-scan-threads: 4
 
 # 文件上传配置
