@@ -2,8 +2,10 @@ package com.alibaba.dependencycheck.controller;
 
 import com.alibaba.dependencycheck.model.dto.ScanResultDTO;
 import com.alibaba.dependencycheck.model.dto.ScanTaskDTO;
+import com.alibaba.dependencycheck.model.vo.PageResult;
 import com.alibaba.dependencycheck.model.vo.Result;
 import com.alibaba.dependencycheck.service.ScanTaskService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -87,6 +89,27 @@ public class ScanTaskController {
         log.info("取消扫描任务: taskId={}", id);
         ScanTaskDTO task = scanTaskService.cancelTask(id);
         return Result.success(task);
+    }
+
+    /**
+     * 获取扫描任务列表（分页）
+     * <p>
+     * 支持分页查询所有扫描任务，按创建时间降序排列。
+     * 前端可用于任务列表页和仪表盘最近任务展示。
+     * </p>
+     *
+     * @param page     当前页码（默认 1）
+     * @param pageSize 每页大小（默认 10）
+     * @return 分页结果
+     */
+    @GetMapping
+    public Result<PageResult<ScanTaskDTO>> listTasks(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        IPage<ScanTaskDTO> pageResult = scanTaskService.listTasks(page, pageSize);
+        PageResult<ScanTaskDTO> pageInfo = new PageResult<>(
+                pageResult.getRecords(), pageResult.getTotal(), page, pageSize);
+        return Result.success(pageInfo);
     }
 
     /**

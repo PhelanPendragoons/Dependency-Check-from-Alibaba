@@ -66,10 +66,10 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>
+                <el-dropdown-item @click="handleSettings">
                   <el-icon><Setting /></el-icon>系统设置
                 </el-dropdown-item>
-                <el-dropdown-item divided>
+                <el-dropdown-item divided @click="handleLogout">
                   <el-icon><SwitchButton /></el-icon>退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -89,6 +89,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -99,6 +100,14 @@ const toggleFullscreen = () => {
   } else {
     document.exitFullscreen()
   }
+}
+
+const handleSettings = () => {
+  ElMessage.info('系统设置功能开发中')
+}
+
+const handleLogout = () => {
+  ElMessage.info('退出登录功能开发中（当前无需认证）')
 }
 </script>
 

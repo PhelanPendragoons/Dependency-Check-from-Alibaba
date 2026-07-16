@@ -5,6 +5,9 @@
         <el-icon><ArrowLeft /></el-icon>返回
       </el-button>
       <h2 class="page-title">任务详情</h2>
+      <el-tag v-if="isPolling" type="warning" size="small" class="polling-tag">
+        <el-icon class="pulse-icon"><Loading /></el-icon> 自动刷新中
+      </el-tag>
     </div>
 
     <el-card v-if="taskStore.currentTask" class="detail-card">
@@ -81,32 +84,22 @@ import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useTaskStore } from '@/stores/task'
+import { useStatus } from '@/composables/useStatus'
+import { useTaskPolling } from '@/composables/useTaskPolling'
 import { reportApi } from '@/api'
 
 const route = useRoute()
 const taskStore = useTaskStore()
+const { statusType, statusText, isActive } = useStatus()
 
-const statusType = (status) => {
-  const map = {
-    COMPLETED: 'success',
-    RUNNING: 'warning',
-    PENDING: 'info',
-    FAILED: 'danger',
-    CANCELLED: 'info',
-  }
-  return map[status] || 'info'
+const refreshTask = () => taskStore.fetchTask(route.params.id)
+
+const hasActiveTask = () => {
+  const task = taskStore.currentTask
+  return task && isActive(task.status)
 }
 
-const statusText = (status) => {
-  const map = {
-    COMPLETED: '已完成',
-    RUNNING: '扫描中',
-    PENDING: '等待中',
-    FAILED: '失败',
-    CANCELLED: '已取消',
-  }
-  return map[status] || status
-}
+const { startPolling, isPolling } = useTaskPolling(refreshTask, hasActiveTask, 3000)
 
 const downloadReport = (format) => {
   const url = reportApi.getReportUrl(route.params.id, format)
@@ -122,8 +115,12 @@ const handleCancel = async () => {
   }
 }
 
-onMounted(() => {
-  taskStore.fetchTask(route.params.id)
+onMounted(async () => {
+  await taskStore.fetchTask(route.params.id)
+  // 如果任务是活跃状态，启动自动轮询
+  if (hasActiveTask()) {
+    startPolling()
+  }
 })
 </script>
 
@@ -146,6 +143,10 @@ onMounted(() => {
   color: #303133;
 }
 
+.polling-tag {
+  margin-left: auto;
+}
+
 .detail-card {
   margin-bottom: 20px;
 }
@@ -163,5 +164,14 @@ onMounted(() => {
 .report-actions {
   display: flex;
   gap: 12px;
+}
+
+.pulse-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 </style>

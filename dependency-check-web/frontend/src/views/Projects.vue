@@ -39,6 +39,20 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper" v-if="projectStore.total > 0">
+        <el-pagination
+          v-model:current-page="projectStore.currentPage"
+          v-model:page-size="projectStore.pageSize"
+          :total="projectStore.total"
+          :page-sizes="[5, 10, 20]"
+          layout="total, sizes, prev, pager, next"
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+          background
+        />
+      </div>
     </el-card>
 
     <!-- 上传对话框 -->
@@ -96,6 +110,14 @@ const selectedFile = ref(null)
 
 const handleFileChange = (file) => {
   selectedFile.value = file.raw
+}
+
+const handlePageChange = (page) => {
+  projectStore.fetchProjects(page, projectStore.pageSize)
+}
+
+const handleSizeChange = (size) => {
+  projectStore.fetchProjects(1, size)
 }
 
 const handleUpload = async () => {
@@ -169,5 +191,11 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #303133;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

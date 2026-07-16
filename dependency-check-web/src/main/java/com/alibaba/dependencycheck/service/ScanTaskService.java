@@ -10,6 +10,8 @@ import com.alibaba.dependencycheck.model.entity.Project;
 import com.alibaba.dependencycheck.model.entity.ScanResult;
 import com.alibaba.dependencycheck.model.entity.ScanTask;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -121,6 +123,26 @@ public class ScanTaskService {
         // 重新查询获取最新状态
         ScanTask updated = scanTaskMapper.selectById(taskId);
         return convertToDTO(updated);
+    }
+
+    /**
+     * 分页查询扫描任务列表
+     * <p>
+     * 按创建时间降序排列，支持分页查询。
+     * 前端用于任务列表页和仪表盘最近任务展示。
+     * </p>
+     *
+     * @param page     当前页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    public IPage<ScanTaskDTO> listTasks(int page, int pageSize) {
+        Page<ScanTask> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<ScanTask> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(ScanTask::getCreatedAt);
+
+        IPage<ScanTask> taskPage = scanTaskMapper.selectPage(pageParam, queryWrapper);
+        return taskPage.convert(this::convertToDTO);
     }
 
     /**

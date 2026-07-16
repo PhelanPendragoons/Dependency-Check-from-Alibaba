@@ -8,7 +8,7 @@
       <template #header>
         <span>已完成扫描任务</span>
       </template>
-      <el-table :data="completedTasks" stripe v-loading="taskStore.loading">
+      <el-table :data="pagedCompletedTasks" stripe v-loading="taskStore.loading">
         <el-table-column prop="id" label="任务ID" width="80" />
         <el-table-column prop="projectId" label="项目ID" width="80" />
         <el-table-column prop="totalDependencies" label="依赖总数" width="100" />
@@ -35,20 +35,40 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper" v-if="completedTasks.length > 0">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="completedTasks.length"
+          :page-sizes="[5, 10, 20]"
+          layout="total, sizes, prev, pager, next"
+          background
+        />
+      </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { reportApi } from '@/api'
 
 const taskStore = useTaskStore()
 
+const currentPage = ref(1)
+const pageSize = ref(10)
+
 const completedTasks = computed(() =>
   taskStore.tasks.filter(t => t.status === 'COMPLETED')
 )
+
+const pagedCompletedTasks = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return completedTasks.value.slice(start, start + pageSize.value)
+})
 
 const viewReport = (taskId, format) => {
   const url = reportApi.getReportUrl(taskId, format)
@@ -56,7 +76,8 @@ const viewReport = (taskId, format) => {
 }
 
 onMounted(() => {
-  taskStore.fetchTasks()
+  // 获取较多数据用于报告列表（completed tasks 在客户端分页）
+  taskStore.fetchTasks({ page: 1, pageSize: 100 })
 })
 </script>
 
@@ -77,5 +98,11 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #303133;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

@@ -43,9 +43,9 @@ dependency-check:
 app:
   upload-dir: ./uploads
   report-dir: ./reports
-  # C4 修复（7/3）：CORS 跨域来源配置，开发环境默认 localhost:5173
+  # C4 修复（7/3）：CORS 跨域来源配置，开发环境默认 localhost:3000（与 Vite dev server 端口一致）
   cors:
-    allowed-origin: http://localhost:5173
+    allowed-origin: http://localhost:3000
   # D4（7/6）：阿里云 OSS 配置，默认关闭，生产环境通过环境变量开启
   oss:
     enabled: false
@@ -61,6 +61,19 @@ task:
     max-pool-size: 4
     queue-capacity: 10
     thread-name-prefix: scan-task-
+
+# SpringDoc OpenAPI 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: method
+    doc-expansion: list
+  packages-to-scan: com.alibaba.dependencycheck.controller
 
 # Actuator 健康检查
 management:

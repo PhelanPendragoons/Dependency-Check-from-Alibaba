@@ -6,13 +6,19 @@ export const useProjectStore = defineStore('project', {
     projects: [],
     currentProject: null,
     loading: false,
+    total: 0,
+    currentPage: 1,
+    pageSize: 10,
   }),
   actions: {
-    async fetchProjects() {
+    async fetchProjects(page = 1, pageSize = 10) {
       this.loading = true
+      this.currentPage = page
+      this.pageSize = pageSize
       try {
-        const res = await projectApi.list()
+        const res = await projectApi.list({ page, pageSize })
         this.projects = res.data?.records || []
+        this.total = res.data?.total || 0
       } finally {
         this.loading = false
       }
@@ -28,12 +34,12 @@ export const useProjectStore = defineStore('project', {
     },
     async createProject(formData) {
       const res = await projectApi.create(formData)
-      await this.fetchProjects()
+      await this.fetchProjects(this.currentPage, this.pageSize)
       return res
     },
     async deleteProject(id) {
       await projectApi.delete(id)
-      await this.fetchProjects()
+      await this.fetchProjects(this.currentPage, this.pageSize)
     },
   },
 })

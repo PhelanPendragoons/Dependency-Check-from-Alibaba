@@ -2,6 +2,14 @@
   <div class="tasks-page">
     <div class="page-header">
       <h2 class="page-title">扫描任务</h2>
+      <div class="header-right">
+        <el-tag v-if="isPolling" type="warning" size="small">
+          <el-icon class="pulse-icon"><Loading /></el-icon> 自动刷新中
+        </el-tag>
+        <el-button @click="refreshTasks" :loading="taskStore.loading">
+          <el-icon><Refresh /></el-icon>刷新
+        </el-button>
+      </div>
     </div>
 
     <el-card>
@@ -47,6 +55,20 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper" v-if="taskStore.total > 0">
+        <el-pagination
+          v-model:current-page="taskStore.currentPage"
+          v-model:page-size="taskStore.pageSize"
+          :total="taskStore.total"
+          :page-sizes="[5, 10, 20]"
+          layout="total, sizes, prev, pager, next"
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+          background
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -55,29 +77,24 @@
 import { onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useTaskStore } from '@/stores/task'
+import { useStatus } from '@/composables/useStatus'
+import { useTaskPolling } from '@/composables/useTaskPolling'
 
 const taskStore = useTaskStore()
+const { statusType, statusText, isActive } = useStatus()
 
-const statusType = (status) => {
-  const map = {
-    COMPLETED: 'success',
-    RUNNING: 'warning',
-    PENDING: 'info',
-    FAILED: 'danger',
-    CANCELLED: 'info',
-  }
-  return map[status] || 'info'
+const refreshTasks = () => taskStore.fetchTasks()
+
+const hasActiveTasks = () => taskStore.tasks.some(t => isActive(t.status))
+
+const { startPolling, isPolling } = useTaskPolling(refreshTasks, hasActiveTasks)
+
+const handlePageChange = (page) => {
+  taskStore.fetchTasks({ page, pageSize: taskStore.pageSize })
 }
 
-const statusText = (status) => {
-  const map = {
-    COMPLETED: '已完成',
-    RUNNING: '扫描中',
-    PENDING: '等待中',
-    FAILED: '失败',
-    CANCELLED: '已取消',
-  }
-  return map[status] || status
+const handleSizeChange = (size) => {
+  taskStore.fetchTasks({ page: 1, pageSize: size })
 }
 
 const handleCancel = async (task) => {
@@ -89,8 +106,12 @@ const handleCancel = async (task) => {
   }
 }
 
-onMounted(() => {
-  taskStore.fetchTasks()
+onMounted(async () => {
+  await taskStore.fetchTasks()
+  // 如果有活跃任务，启动自动轮询
+  if (hasActiveTasks()) {
+    startPolling()
+  }
 })
 </script>
 
@@ -107,9 +128,30 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .page-title {
   font-size: 24px;
   font-weight: 600;
   color: #303133;
+}
+
+.pulse-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>

@@ -6,13 +6,20 @@ export const useTaskStore = defineStore('task', {
     tasks: [],
     currentTask: null,
     loading: false,
+    total: 0,
+    currentPage: 1,
+    pageSize: 10,
   }),
   actions: {
-    async fetchTasks(params) {
+    async fetchTasks(params = {}) {
       this.loading = true
       try {
-        const res = await taskApi.list(params)
-        this.tasks = res.data || []
+        const merged = { page: this.currentPage, pageSize: this.pageSize, ...params }
+        const res = await taskApi.list(merged)
+        this.tasks = res.data?.records || []
+        this.total = res.data?.total || 0
+        if (merged.page) this.currentPage = merged.page
+        if (merged.pageSize) this.pageSize = merged.pageSize
       } finally {
         this.loading = false
       }

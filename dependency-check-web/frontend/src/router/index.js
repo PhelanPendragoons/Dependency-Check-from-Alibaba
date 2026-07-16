@@ -37,6 +37,12 @@ const routes = [
     component: () => import('@/views/Reports.vue'),
     meta: { title: '报告中心' },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue'),
+    meta: { title: '404' },
+  },
 ]
 
 const router = createRouter({

@@ -41,10 +41,54 @@
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-info">
-              <div class="stat-label">高危漏洞</div>
-              <div class="stat-value" style="color: #e6a23c">{{ stats.highVulnerabilities }}</div>
+              <div class="stat-label">高危 / 严重</div>
+              <div class="stat-value" style="color: #e6a23c">{{ stats.criticalCount + stats.highCount }}</div>
             </div>
             <el-icon class="stat-icon" color="#e6a23c" :size="48"><CircleClose /></el-icon>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 漏洞等级分布 -->
+    <el-row :gutter="20" class="stat-cards" v-if="stats.totalVulnerabilities > 0">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card severity-card critical">
+          <div class="stat-content">
+            <div class="stat-info">
+              <div class="stat-label">严重 CRITICAL</div>
+              <div class="stat-value" style="color: #8b0000">{{ stats.criticalCount }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card severity-card high">
+          <div class="stat-content">
+            <div class="stat-info">
+              <div class="stat-label">高危 HIGH</div>
+              <div class="stat-value" style="color: #f56c6c">{{ stats.highCount }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card severity-card medium">
+          <div class="stat-content">
+            <div class="stat-info">
+              <div class="stat-label">中危 MEDIUM</div>
+              <div class="stat-value" style="color: #e6a23c">{{ stats.mediumCount }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card severity-card low">
+          <div class="stat-content">
+            <div class="stat-info">
+              <div class="stat-label">低危 LOW</div>
+              <div class="stat-value" style="color: #67c23a">{{ stats.lowCount }}</div>
+            </div>
           </div>
         </el-card>
       </el-col>
@@ -88,54 +132,43 @@
 import { ref, onMounted, computed } from 'vue'
 import { useTaskStore } from '@/stores/task'
 import { useProjectStore } from '@/stores/project'
+import { useStatus } from '@/composables/useStatus'
+import { dashboardApi } from '@/api'
 
 const taskStore = useTaskStore()
 const projectStore = useProjectStore()
+const { statusType, statusText } = useStatus()
 
 const stats = ref({
   totalProjects: 0,
   totalTasks: 0,
+  completedTasks: 0,
   totalVulnerabilities: 0,
-  highVulnerabilities: 0,
+  criticalCount: 0,
+  highCount: 0,
+  mediumCount: 0,
+  lowCount: 0,
+  licenseIssues: 0,
 })
 
 const recentTasks = computed(() => taskStore.tasks.slice(0, 10))
 
-const statusType = (status) => {
-  const map = {
-    COMPLETED: 'success',
-    RUNNING: 'warning',
-    PENDING: 'info',
-    FAILED: 'danger',
-    CANCELLED: 'info',
-  }
-  return map[status] || 'info'
-}
-
-const statusText = (status) => {
-  const map = {
-    COMPLETED: '已完成',
-    RUNNING: '扫描中',
-    PENDING: '等待中',
-    FAILED: '失败',
-    CANCELLED: '已取消',
-  }
-  return map[status] || status
-}
-
 onMounted(async () => {
+  try {
+    // 获取仪表盘聚合统计数据（按severity分级）
+    const res = await dashboardApi.getStats()
+    if (res.data) {
+      stats.value = res.data
+    }
+  } catch (e) {
+    console.error('获取仪表盘统计失败:', e)
+  }
+
+  // 获取最近任务列表
   await Promise.all([
     taskStore.fetchTasks(),
     projectStore.fetchProjects(),
   ])
-  // 计算统计数据
-  const tasks = taskStore.tasks
-  stats.value.totalProjects = projectStore.projects.length
-  stats.value.totalTasks = tasks.length
-  stats.value.totalVulnerabilities = tasks.reduce(
-    (sum, t) => sum + (t.vulnerableDependencies || 0), 0
-  )
-  stats.value.highVulnerabilities = stats.value.totalVulnerabilities // 简化处理
 })
 </script>
 
@@ -158,6 +191,22 @@ onMounted(async () => {
 
 .stat-card {
   cursor: pointer;
+}
+
+.stat-card.severity-card.critical {
+  border-left: 4px solid #8b0000;
+}
+
+.stat-card.severity-card.high {
+  border-left: 4px solid #f56c6c;
+}
+
+.stat-card.severity-card.medium {
+  border-left: 4px solid #e6a23c;
+}
+
+.stat-card.severity-card.low {
+  border-left: 4px solid #67c23a;
 }
 
 .stat-content {

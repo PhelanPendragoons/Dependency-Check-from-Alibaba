@@ -84,36 +84,16 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '@/stores/project'
 import { useTaskStore } from '@/stores/task'
+import { useStatus } from '@/composables/useStatus'
 
 const route = useRoute()
 const projectStore = useProjectStore()
 const taskStore = useTaskStore()
+const { statusType, statusText } = useStatus()
 
 const projectTasks = computed(() =>
   taskStore.tasks.filter(t => t.projectId === Number(route.params.id))
 )
-
-const statusType = (status) => {
-  const map = {
-    COMPLETED: 'success',
-    RUNNING: 'warning',
-    PENDING: 'info',
-    FAILED: 'danger',
-    CANCELLED: 'info',
-  }
-  return map[status] || 'info'
-}
-
-const statusText = (status) => {
-  const map = {
-    COMPLETED: '已完成',
-    RUNNING: '扫描中',
-    PENDING: '等待中',
-    FAILED: '失败',
-    CANCELLED: '已取消',
-  }
-  return map[status] || status
-}
 
 const startScan = async () => {
   try {

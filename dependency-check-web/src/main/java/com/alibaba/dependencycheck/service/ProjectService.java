@@ -440,11 +440,20 @@ public class ProjectService {
                     throw new BusinessException("检测到路径穿越攻击，文件上传被拒绝");
                 }
 
-                if (entry.isDirectory()) {
+                if (entry.isDirectory() || entry.getName().endsWith("\\")) {
                     Files.createDirectories(entryPath);
                 } else {
                     // 确保父目录存在
-                    Files.createDirectories(entryPath.getParent());
+                    // B4-05 修复：处理 ZIP 中文件条目先于目录条目的情况
+                    // 某些 ZIP 创建工具不会为中间目录生成目录条目，
+                    // 导致 Files.createDirectories() 遇到同名文件时报 FileAlreadyExistsException
+                    Path parent = entryPath.getParent();
+                    if (parent != null) {
+                        if (Files.isRegularFile(parent)) {
+                            Files.delete(parent);
+                        }
+                        Files.createDirectories(parent);
+                    }
                     // B4-10 修复：添加 REPLACE_EXISTING 选项，防止同名文件覆盖时报错
                     Files.copy(zis, entryPath, StandardCopyOption.REPLACE_EXISTING);
                 }

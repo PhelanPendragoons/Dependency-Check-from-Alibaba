@@ -25,9 +25,9 @@ request.interceptors.response.use(
 // ==================== 项目管理 API ====================
 
 export const projectApi = {
-  /** 获取项目列表 */
-  list() {
-    return request.get('/projects')
+  /** 获取项目列表（分页） */
+  list(params) {
+    return request.get('/projects', { params })
   },
   /** 获取项目详情 */
   get(id) {
@@ -66,20 +66,21 @@ export const taskApi = {
   },
 }
 
+// ==================== 仪表盘 API ====================
+
+export const dashboardApi = {
+  /** 获取仪表盘统计数据 */
+  getStats() {
+    return request.get('/dashboard')
+  },
+}
+
 // ==================== 报告 API ====================
 
 export const reportApi = {
   /** 查看/下载报告 */
   getReportUrl(taskId, format = 'html') {
     return `/api/reports/${taskId}?format=${format}`
-  },
-  /** 检查报告是否存在 */
-  exists(taskId) {
-    return request.get(`/reports/${taskId}/exists`)
-  },
-  /** 获取可用格式列表 */
-  getFormats(taskId) {
-    return request.get(`/reports/${taskId}/formats`)
   },
 }
 
