@@ -1,0 +1,33 @@
+# ===== 构建产物 =====
+**/target/
+**/dist/
+**/node_modules/
+
+# ===== 运行时数据（H2 库 / NVD 缓存 / 上传文件 / 日志）=====
+dependency-check-web/data/
+dependency-check-web/uploads/
+logs/
+*.log
+*.mv.db
+*.trace.db
+
+# ===== 敏感配置（明文 NVD API Key，绝不提交）=====
+nvd-api.properties
+**/nvd-api.properties
+
+# ===== 大文件 / 测试数据 =====
+*.zip
+*.jar
+*.war
+
+# ===== 第三方仓库克隆 / 测试靶场（体积大，不入库）=====
+damn-vulnerable-spring-boot-app/
+实习专用/DependencyCheck/
+实习专用/spring-cloud-alibaba/
+实习专用/spring-petclinic/
+
+# ===== IDE / 系统 =====
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
