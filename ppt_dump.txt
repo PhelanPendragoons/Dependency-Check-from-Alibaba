@@ -1,0 +1,472 @@
+slide size: 13.32 x 7.50 in, 共 13 页
+
+===== 幻灯片 1 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='Freeform 4' FREEFORM (无文字)
+  [3] name='AutoShape 5' AUTO_SHAPE (无文字)
+  [4] name='Picture 6' PICTURE (无文字)
+  [5] name='Picture 7' PICTURE (无文字)
+  [6] name='AutoShape 8' pos=(6.0,2.4) size=(6.5x1.1)
+       «依赖安全与合规分析平台»
+  [7] name='Connector 9' LINE (无文字)
+  [8] name='AutoShape 10' pos=(6.1,3.3) size=(6.2x1.5)
+       «基于 OWASP Dependency-Check 引擎构建的轻量级 Web 服务，实现对软件依赖包的自动化漏洞检测与合规性分析，为研发流程注入实时的安全扫描能力，降低供应链攻击风险。»
+  [9] name='AutoShape 11' pos=(1.2,6.7) size=(4.4x0.3)
+       «汇报人：Alex 时间：2026.07»
+  [10] name='Freeform 12' FREEFORM (无文字)
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='Freeform 14' FREEFORM (无文字)
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='Freeform 16' FREEFORM (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='Freeform 18' FREEFORM (无文字)
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+  [18] name='Freeform 20' FREEFORM (无文字)
+
+===== 幻灯片 2 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Picture 3' PICTURE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='AutoShape 5' pos=(8.3,0.9) size=(0.8x0.6)
+       «01»
+  [4] name='AutoShape 6' AUTO_SHAPE (无文字)
+  [5] name='AutoShape 7' pos=(8.3,3.3) size=(0.8x0.6)
+       «03»
+  [6] name='AutoShape 8' AUTO_SHAPE (无文字)
+  [7] name='AutoShape 9' pos=(8.3,4.4) size=(0.8x0.6)
+       «04»
+  [8] name='AutoShape 10' AUTO_SHAPE (无文字)
+  [9] name='AutoShape 11' pos=(8.3,2.1) size=(0.8x0.6)
+       «02»
+  [10] name='Freeform 12' pos=(9.5,1.0) size=(2.7x0.0)
+       «项目背景与简介»
+  [11] name='Freeform 13' pos=(9.5,2.2) size=(3.0x0.0)
+       «工作完成情况»
+  [12] name='Freeform 14' pos=(9.5,3.4) size=(3.5x0.0)
+       «成果展示»
+  [13] name='Freeform 15' pos=(9.5,4.5) size=(3.2x0.0)
+       «总结与展望»
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' pos=(5.7,2.5) size=(2.0x0.9)
+       «目录»
+  [16] name='AutoShape 18' pos=(5.9,3.4) size=(1.5x0.4)
+       «CONTENTS»
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+
+===== 幻灯片 3 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='Connector 5' LINE (无文字)
+  [4] name='AutoShape 6' pos=(5.5,2.7) size=(7.3x0.8)
+       «第一部分|项目背景与简介»
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='Freeform 8' FREEFORM (无文字)
+  [7] name='AutoShape 9' pos=(5.5,3.8) size=(2.0x0.3)
+       «项目概况总览»
+  [8] name='AutoShape 10' pos=(7.8,3.8) size=(2.0x0.3)
+       «核心背景解读»
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' AUTO_SHAPE (无文字)
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' AUTO_SHAPE (无文字)
+  [20] name='AutoShape 22' AUTO_SHAPE (无文字)
+
+===== 幻灯片 4 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Picture 3' PICTURE (无文字)
+  [2] name='Freeform 4' FREEFORM (无文字)
+  [3] name='AutoShape 5' pos=(1.3,0.2) size=(9.0x0.6)
+       «第三方依赖漏洞 —— 被忽视的安全短板»
+  [4] name='Connector 6' LINE (无文字)
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='AutoShape 8' pos=(1.0,1.8) size=(5.3x0.6)
+       «01 核心痛点：隐蔽的供应链风险»
+  [7] name='AutoShape 9' pos=(1.0,2.6) size=(5.3x1.0)
+       «❶ 依赖占比高，漏洞防不胜防现代Java应用80%以上代码来自第三方组件，Log4Shell等0day漏洞可通过依赖链瞬间击穿系统，成为企业安全的“隐形炸弹”。»
+  [8] name='AutoShape 10' pos=(1.0,3.8) size=(5.3x1.0)
+       «❷ 人工排查难，极易遗漏风险依赖树层级深且存在传递性依赖，人工逐条比对CVE数据库不仅耗时费力，更难以覆盖所有间接依赖的高危漏洞。»
+  [9] name='AutoShape 11' pos=(1.0,4.9) size=(5.3x1.0)
+       «❸ 工具门槛高，体验不够友好业界标准工具ODC需复杂环境配置，NVD数据同步门槛高，输出结果为纯文本日志，缺乏可视化分析，普通开发者上手困难。»
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' pos=(7.0,1.8) size=(5.3x0.6)
+       «02 方案定位：轻量化可视化扫描中台»
+  [12] name='AutoShape 14' pos=(7.0,2.6) size=(5.3x1.0)
+       «🚀 引擎内嵌：基于业界标准重构将OWASP Dependency-Check引擎封装为Java Library，无缝嵌入Spring Boot应用，彻底摆脱命令行操作的繁琐与环境限制。»
+  [13] name='AutoShape 15' pos=(7.0,3.8) size=(5.3x1.0)
+       «⚡ 极简闭环：零门槛操作体验实现“上传ZIP包 → 一键扫描 → 可视化图谱展示 → 生成报告”的全流程闭环，支持HTML/JSON/XML三种格式输出。»
+  [14] name='AutoShape 16' pos=(7.0,4.9) size=(5.3x1.0)
+       «🛠️ 主流技术栈：稳定且易扩展后端采用Spring Boot 3.2 + MyBatis-Plus，前端基于Vue 3 + Element Plus构建，支持阿里云OSS存储，适配企业级部署需求。»
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' pos=(1.0,6.6) size=(11.5x0.4)
+       «价值愿景：将专业的安全治理能力“平民化”，让每一位开发者都能轻松掌握依赖漏洞的主动权，筑牢软件供应链安全防线。»
+
+===== 幻灯片 5 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='Connector 5' LINE (无文字)
+  [4] name='AutoShape 6' pos=(5.5,2.7) size=(6.5x0.8)
+       «第二部分|工作完成情况»
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='Freeform 8' FREEFORM (无文字)
+  [7] name='AutoShape 9' AUTO_SHAPE (无文字)
+  [8] name='AutoShape 10' AUTO_SHAPE (无文字)
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' AUTO_SHAPE (无文字)
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' AUTO_SHAPE (无文字)
+  [20] name='AutoShape 22' AUTO_SHAPE (无文字)
+
+===== 幻灯片 6 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Picture 3' PICTURE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='AutoShape 5' pos=(1.3,0.2) size=(9.7x0.6)
+       «12周计划，8周完成核心 —— 完成度 99%»
+  [4] name='Connector 6' LINE (无文字)
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='AutoShape 8' pos=(1.2,1.7) size=(3.5x0.4)
+       «01. 测试零回归»
+  [7] name='AutoShape 9' pos=(1.2,2.2) size=(3.5x0.6)
+       «67 / 67»
+  [8] name='AutoShape 10' pos=(1.2,2.8) size=(3.5x0.6)
+       «后端测试用例全部通过，无遗留Bug，实现真正的零回归验收标准。»
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' pos=(5.1,1.7) size=(3.5x0.4)
+       «02. 质量全闭环»
+  [11] name='AutoShape 13' pos=(5.1,2.2) size=(3.5x0.6)
+       «199 / 46»
+  [12] name='AutoShape 14' pos=(5.1,2.8) size=(3.5x0.6)
+       «覆盖199项开发核查点审计，发现的46个潜在问题已全部闭环修复。»
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='AutoShape 16' pos=(9.0,1.7) size=(3.5x0.4)
+       «03. 版本已发布»
+  [15] name='AutoShape 17' pos=(9.0,2.2) size=(3.5x0.6)
+       «v1.0.0»
+  [16] name='AutoShape 18' pos=(9.0,2.8) size=(3.5x0.6)
+       «已在Git仓库打标正式版本，完成生产环境部署与交付，满足上线条件。»
+  [17] name='AutoShape 19' pos=(1.1,3.9) size=(11.5x0.4)
+       «▍项目全阶段交付进度详情»
+  [18] name='Table 20' TABLE (无文字)
+
+===== 幻灯片 7 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='Connector 5' LINE (无文字)
+  [4] name='AutoShape 6' pos=(5.5,2.7) size=(6.5x0.8)
+       «第三部分|成果展示»
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='AutoShape 8' AUTO_SHAPE (无文字)
+  [7] name='AutoShape 9' AUTO_SHAPE (无文字)
+  [8] name='Freeform 10' FREEFORM (无文字)
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' AUTO_SHAPE (无文字)
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' AUTO_SHAPE (无文字)
+  [20] name='AutoShape 22' AUTO_SHAPE (无文字)
+
+===== 幻灯片 8 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Picture 3' PICTURE (无文字)
+  [2] name='Freeform 4' FREEFORM (无文字)
+  [3] name='AutoShape 5' pos=(1.3,0.2) size=(6.2x0.6)
+       «一条完整的扫描流水线»
+  [4] name='Connector 6' LINE (无文字)
+  [5] name='AutoShape 7' pos=(1.1,1.2) size=(11.1x0.4)
+       «01 端到端架构执行链路»
+  [6] name='AutoShape 8' AUTO_SHAPE (无文字)
+  [7] name='AutoShape 9' pos=(1.2,2.0) size=(2.6x0.8)
+       «📱 前端交互层 ¶ Vue 3 浏览器端，支持ZIP拖拽上传与安全校验»
+  [8] name='AutoShape 10' AUTO_SHAPE (无文字)
+  [9] name='AutoShape 11' pos=(4.2,2.0) size=(2.6x0.8)
+       «⚙️ 后端服务层 ¶ Spring Boot REST API，提供标准化接口服务»
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' pos=(7.3,2.0) size=(2.6x0.8)
+       «🚀 异步任务池 ¶ @Async 驱动任务队列，支持实时进度轮询»
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' pos=(10.3,2.0) size=(2.6x0.8)
+       «🧠 核心扫描引擎 ¶ 集成 ODC 9.0.0 引擎，深度解析依赖漏洞»
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' pos=(1.2,3.2) size=(2.6x0.8)
+       «💾 离线漏洞库 ¶ NVD 250MB本地缓存，完全脱离外网运行»
+  [16] name='AutoShape 18' AUTO_SHAPE (无文字)
+  [17] name='AutoShape 19' pos=(4.2,3.2) size=(2.6x0.8)
+       «💽 数据持久化 ¶ 嵌入式 H2 数据库，轻量化存储扫描记录»
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' pos=(7.3,3.2) size=(2.6x0.8)
+       «📄 多格式报告 ¶ 一键生成 HTML/Excel/PDF，满足审计需求»
+  [20] name='AutoShape 22' AUTO_SHAPE (无文字)
+  [21] name='AutoShape 23' pos=(10.3,3.2) size=(2.6x0.8)
+       «☁️ 弹性存储 ¶ OSS 云存储集成，支持本地降级兜底策略»
+  [22] name='AutoShape 24' pos=(1.1,4.4) size=(11.1x0.4)
+       «02 六大核心安全与效率特性»
+  [23] name='AutoShape 25' AUTO_SHAPE (无文字)
+  [24] name='AutoShape 26' pos=(1.2,5.0) size=(3.5x0.9)
+       «🛡️ 安全的项目管理 ¶ 支持ZIP上传，内置Zip Slip路径穿越三层防护，杜绝恶意文件攻击风险。»
+  [25] name='AutoShape 27' AUTO_SHAPE (无文字)
+  [26] name='AutoShape 28' pos=(5.1,5.0) size=(3.5x0.9)
+       «⚡ 高效异步调度 ¶ 任务队列缓冲处理，非阻塞式扫描，配合前端实时进度条，用户体验流畅。»
+  [27] name='AutoShape 29' AUTO_SHAPE (无文字)
+  [28] name='AutoShape 30' pos=(8.9,5.0) size=(3.5x0.9)
+       «📊 漏洞分级统计 ¶ 按CRITICAL/HIGH/MEDIUM/LOW自动分级，可视化大屏直观展示风险分布。»
+  [29] name='AutoShape 31' AUTO_SHAPE (无文字)
+  [30] name='AutoShape 32' pos=(1.2,6.1) size=(3.5x0.9)
+       «📑 多格式报告导出 ¶ HTML在线查看、Excel数据分析、PDF归档留存，一键生成满足不同场景。»
+  [31] name='AutoShape 33' AUTO_SHAPE (无文字)
+  [32] name='AutoShape 34' pos=(5.1,6.1) size=(3.5x0.9)
+       «📚 全接口在线文档 ¶ 集成Swagger，提供可交互的API调试与文档查阅，降低二次开发与对接成本。»
+  [33] name='AutoShape 35' AUTO_SHAPE (无文字)
+  [34] name='AutoShape 36' pos=(8.9,6.1) size=(3.5x0.9)
+       «🔌 灵活的存储适配 ¶ 条件装配OSS云存储，无外网环境自动降级为本地存储，保障系统高可用性。»
+
+===== 幻灯片 9 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='AutoShape 4' pos=(0.8,1.4) size=(11.7x0.8)
+       «真实扫描效果（2026-07-16 实测）»
+  [3] name='AutoShape 5' AUTO_SHAPE (无文字)
+  [4] name='AutoShape 6' pos=(1.0,2.7) size=(3.5x0.4)
+       «01 Spring PetClinic (官方示例)»
+  [5] name='AutoShape 7' pos=(1.0,3.3) size=(3.3x1.1)
+       «作为行业标准的入门级项目，仍存在基础安全隐患： ¶ 依赖数：149 个 | 检出漏洞：18 个»
+  [6] name='AutoShape 8' AUTO_SHAPE (无文字)
+  [7] name='AutoShape 9' pos=(5.0,2.7) size=(3.5x0.4)
+       «02 DVBA 漏洞靶场 (高危测试)»
+  [8] name='AutoShape 10' pos=(5.0,3.3) size=(3.3x1.1)
+       «专为安全测试构建的脆弱环境，漏洞密度极高： ¶ 依赖数：27 个 | 检出漏洞：61 个»
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' pos=(9.0,2.7) size=(3.5x0.4)
+       «03 Nacos Config (微服务示例)»
+  [11] name='AutoShape 13' pos=(9.0,3.3) size=(3.3x1.1)
+       «主流微服务配置中心组件，存在配置与鉴权风险： ¶ 依赖数：22 个 | 检出漏洞：32 个»
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' pos=(1.0,5.2) size=(3.5x0.4)
+       «扫描覆盖依赖总数»
+  [14] name='AutoShape 16' pos=(1.0,5.7) size=(3.5x0.7)
+       «198个组件 (去重后)»
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' pos=(5.0,5.2) size=(3.5x0.4)
+       «累计发现安全漏洞»
+  [17] name='AutoShape 19' pos=(5.0,5.7) size=(3.5x0.7)
+       «111个 (含严重/高危 78个)»
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' pos=(9.0,5.2) size=(3.5x0.4)
+       «漏洞风险等级分布»
+  [20] name='AutoShape 22' pos=(9.0,5.7) size=(3.5x0.7)
+       «严重 23/高危 55/中危 33»
+
+===== 幻灯片 10 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Freeform 3' FREEFORM (无文字)
+  [2] name='Freeform 4' FREEFORM (无文字)
+  [3] name='Freeform 5' FREEFORM (无文字)
+  [4] name='Freeform 6' FREEFORM (无文字)
+  [5] name='Freeform 7' FREEFORM (无文字)
+  [6] name='Freeform 8' FREEFORM (无文字)
+  [7] name='Freeform 9' FREEFORM (无文字)
+  [8] name='Freeform 10' FREEFORM (无文字)
+  [9] name='Freeform 11' FREEFORM (无文字)
+  [10] name='Freeform 12' FREEFORM (无文字)
+  [11] name='Freeform 13' FREEFORM (无文字)
+  [12] name='Freeform 14' FREEFORM (无文字)
+  [13] name='Freeform 15' FREEFORM (无文字)
+  [14] name='Freeform 16' FREEFORM (无文字)
+  [15] name='Freeform 17' FREEFORM (无文字)
+  [16] name='Freeform 18' FREEFORM (无文字)
+  [17] name='Freeform 19' FREEFORM (无文字)
+  [18] name='Freeform 20' FREEFORM (无文字)
+  [19] name='Freeform 21' FREEFORM (无文字)
+  [20] name='Freeform 22' FREEFORM (无文字)
+  [21] name='Freeform 23' FREEFORM (无文字)
+  [22] name='Freeform 24' FREEFORM (无文字)
+  [23] name='Freeform 25' FREEFORM (无文字)
+  [24] name='Freeform 26' FREEFORM (无文字)
+  [25] name='Freeform 27' FREEFORM (无文字)
+  [26] name='Freeform 28' FREEFORM (无文字)
+  [27] name='Freeform 29' FREEFORM (无文字)
+  [28] name='Freeform 30' FREEFORM (无文字)
+  [29] name='Freeform 31' FREEFORM (无文字)
+  [30] name='Freeform 32' FREEFORM (无文字)
+  [31] name='Freeform 33' FREEFORM (无文字)
+  [32] name='Freeform 34' FREEFORM (无文字)
+  [33] name='Freeform 35' FREEFORM (无文字)
+  [34] name='Freeform 36' FREEFORM (无文字)
+  [35] name='Freeform 37' FREEFORM (无文字)
+  [36] name='Freeform 38' FREEFORM (无文字)
+  [37] name='Freeform 39' FREEFORM (无文字)
+  [38] name='Freeform 40' FREEFORM (无文字)
+  [39] name='Freeform 41' FREEFORM (无文字)
+  [40] name='Freeform 42' FREEFORM (无文字)
+  [41] name='Freeform 43' FREEFORM (无文字)
+  [42] name='Freeform 44' FREEFORM (无文字)
+  [43] name='Freeform 45' FREEFORM (无文字)
+  [44] name='Freeform 46' FREEFORM (无文字)
+  [45] name='Freeform 47' FREEFORM (无文字)
+  [46] name='Freeform 48' FREEFORM (无文字)
+  [47] name='Freeform 49' FREEFORM (无文字)
+  [48] name='Freeform 50' FREEFORM (无文字)
+  [49] name='Freeform 51' FREEFORM (无文字)
+  [50] name='Freeform 52' FREEFORM (无文字)
+  [51] name='Freeform 53' FREEFORM (无文字)
+  [52] name='Freeform 54' FREEFORM (无文字)
+  [53] name='Freeform 55' FREEFORM (无文字)
+  [54] name='Freeform 56' FREEFORM (无文字)
+  [55] name='Freeform 57' FREEFORM (无文字)
+  [56] name='Freeform 58' FREEFORM (无文字)
+  [57] name='Freeform 59' FREEFORM (无文字)
+  [58] name='Freeform 60' FREEFORM (无文字)
+  [59] name='Freeform 61' FREEFORM (无文字)
+  [60] name='Freeform 62' FREEFORM (无文字)
+  [61] name='AutoShape 63' AUTO_SHAPE (无文字)
+  [62] name='Freeform 64' FREEFORM (无文字)
+  [63] name='Freeform 65' FREEFORM (无文字)
+  [64] name='Freeform 66' FREEFORM (无文字)
+  [65] name='Freeform 67' FREEFORM (无文字)
+  [66] name='Freeform 68' FREEFORM (无文字)
+  [67] name='Freeform 69' FREEFORM (无文字)
+  [68] name='Freeform 70' FREEFORM (无文字)
+  [69] name='Freeform 71' FREEFORM (无文字)
+  [70] name='Freeform 72' FREEFORM (无文字)
+  [71] name='Freeform 73' FREEFORM (无文字)
+  [72] name='Freeform 74' FREEFORM (无文字)
+  [73] name='Freeform 75' FREEFORM (无文字)
+  [74] name='Freeform 76' FREEFORM (无文字)
+  [75] name='Freeform 77' FREEFORM (无文字)
+  [76] name='Freeform 78' FREEFORM (无文字)
+  [77] name='Freeform 79' FREEFORM (无文字)
+  [78] name='Freeform 80' FREEFORM (无文字)
+  [79] name='Freeform 81' FREEFORM (无文字)
+  [80] name='Freeform 82' FREEFORM (无文字)
+  [81] name='Freeform 83' FREEFORM (无文字)
+  [82] name='Freeform 84' FREEFORM (无文字)
+  [83] name='Freeform 85' FREEFORM (无文字)
+  [84] name='Freeform 86' FREEFORM (无文字)
+  [85] name='Freeform 87' FREEFORM (无文字)
+  [86] name='Freeform 88' FREEFORM (无文字)
+  [87] name='Freeform 89' FREEFORM (无文字)
+  [88] name='AutoShape 90' pos=(0.7,1.4) size=(11.9x0.8)
+       «三个最有含金量的技术问题»
+  [89] name='AutoShape 91' AUTO_SHAPE (无文字)
+  [90] name='AutoShape 92' pos=(0.8,2.8) size=(3.5x0.4)
+       «01. NVD 数据源 Cloudflare 拦截»
+  [91] name='AutoShape 93' pos=(0.8,3.4) size=(3.5x2.1)
+       «现象：Curl直连正常，但Java客户端恒报520错误，API Key有效却被阻断。 ¶ 根因：基于TLS指纹识别拦截非标准HTTP客户端，常规换IP/升级依赖无效。 ¶ 破局：切换DC引擎datafeed通道，结合镜像源与时间戳预处理，实现全离线扫描。»
+  [92] name='AutoShape 94' AUTO_SHAPE (无文字)
+  [93] name='AutoShape 95' pos=(4.9,2.8) size=(3.5x0.4)
+       «02. @Async 异步任务失效排查»
+  [94] name='AutoShape 96' pos=(4.9,3.4) size=(3.5x2.1)
+       «痛点：同类方法内部调用时，无法触发Spring动态代理，导致异步注解完全失效。 ¶ 分析：this调用绕过Bean代理层，线程池配置无法生效，任务同步执行。 ¶ 方案：拆分独立Executor服务类，实现业务与执行器解耦，强制走代理增强逻辑。»
+  [95] name='AutoShape 97' AUTO_SHAPE (无文字)
+  [96] name='AutoShape 98' pos=(9.0,2.8) size=(3.5x0.4)
+       «03. Zip Slip 路径穿越攻击防护»
+  [97] name='AutoShape 99' pos=(9.0,3.4) size=(3.5x2.1)
+       «风险：恶意ZIP包含“../../”条目，可逃逸上传目录，篡改系统关键配置文件。 ¶ 原理：解压时未校验路径合法性，相对路径被解析为绝对路径导致越权。 ¶ 防护：实施路径规范化、前缀白名单校验、文件类型检测的三层防御体系。»
+  [98] name='AutoShape 100' AUTO_SHAPE (无文字)
+  [99] name='AutoShape 101' pos=(0.8,6.1) size=(11.7x0.7)
+       «技术启示：复杂问题的解决往往需要回归技术本质，从网络协议、框架机制与安全原理的底层逻辑出发，通过架构重构与工程化手段彻底根治问题。»
+
+===== 幻灯片 11 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' AUTO_SHAPE (无文字)
+  [2] name='AutoShape 4' AUTO_SHAPE (无文字)
+  [3] name='Connector 5' LINE (无文字)
+  [4] name='AutoShape 6' pos=(5.5,2.7) size=(6.5x0.8)
+       «第四部分|总结与展望»
+  [5] name='AutoShape 7' pos=(5.5,3.8) size=(2.2x0.3)
+       «项目总结»
+  [6] name='AutoShape 8' pos=(8.3,3.8) size=(2.2x0.3)
+       «个人收获与展望»
+  [7] name='AutoShape 9' AUTO_SHAPE (无文字)
+  [8] name='Freeform 10' FREEFORM (无文字)
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' AUTO_SHAPE (无文字)
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' AUTO_SHAPE (无文字)
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' AUTO_SHAPE (无文字)
+  [17] name='AutoShape 19' AUTO_SHAPE (无文字)
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' AUTO_SHAPE (无文字)
+  [20] name='AutoShape 22' AUTO_SHAPE (无文字)
+
+===== 幻灯片 12 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='Picture 3' PICTURE (无文字)
+  [2] name='AutoShape 4' pos=(1.3,0.2) size=(3.1x0.4)
+       «总结与展望»
+  [3] name='Freeform 5' FREEFORM (无文字)
+  [4] name='Connector 6' LINE (无文字)
+  [5] name='AutoShape 7' AUTO_SHAPE (无文字)
+  [6] name='AutoShape 8' pos=(1.2,1.7) size=(3.4x0.4)
+       «01 项目交付里程碑»
+  [7] name='AutoShape 9' pos=(1.2,2.2) size=(3.4x2.4)
+       «核心成果：成功交付v1.0.0正式版，包含完整的前后端交互平台、5份标准化核心技术文档及可直接对接的Swagger API接口。 ¶ 全栈闭环：独立主导从需求分析、架构设计、开发测试，到安全审计与生产环境发布的全生命周期流程。 ¶ 核心价值：将依赖安全检查的专业门槛，从“必须安全专家操作”降低至“普通工程师5分钟快速上手”。»
+  [8] name='AutoShape 10' AUTO_SHAPE (无文字)
+  [9] name='AutoShape 11' pos=(5.1,1.7) size=(3.4x0.4)
+       «02 演进规划蓝图»
+  [10] name='AutoShape 12' pos=(5.1,2.2) size=(3.4x2.4)
+       «短期目标：完善RBAC用户认证鉴权体系，完成H2数据库向MySQL迁移，并实现Docker容器化一键部署。 ¶ 中期规划：深度接入企业级CI/CD流水线，实现“代码提交即自动安全扫描”，无缝融入DevSecOps体系。 ¶ 长期愿景：技术栈升级至DC 12.x生态，打造覆盖全集团的统一依赖治理与安全合规管控平台。»
+  [11] name='AutoShape 13' AUTO_SHAPE (无文字)
+  [12] name='AutoShape 14' pos=(8.9,1.7) size=(3.4x0.4)
+       «03 个人成长沉淀»
+  [13] name='AutoShape 15' pos=(8.9,2.2) size=(3.4x2.4)
+       «技术融合：打通了Spring Boot生态、现代前端工程化及应用安全防护的技术壁垒，形成全栈技术视野。 ¶ 攻坚思维：沉淀了“现象拆解→原因假设→验证排查→方案绕行”的系统化问题解决方法论。 ¶ 工程素养：养成了高标准的技术文档输出与代码自审计习惯，显著提升了交付质量与系统可维护性。»
+  [14] name='AutoShape 16' AUTO_SHAPE (无文字)
+  [15] name='AutoShape 17' pos=(1.3,5.1) size=(11.0x1.6)
+       «💡 总结与价值回顾 ¶ 本次项目不仅完成了一个安全工具的从0到1构建，更验证了“安全能力下沉”的可行性，将专业的安全治理能力转化为研发人员可直接使用的生产力工具。这不仅是一次技术交付，更是对全栈研发能力、工程化思维以及复杂问题攻坚能力的全面实战淬炼，为后续在更大范围内推广安全治理经验奠定了坚实基础。»
+
+===== 幻灯片 13 =====
+  [0] name='Picture 2' PICTURE (无文字)
+  [1] name='AutoShape 3' pos=(5.6,4.5) size=(2.3x0.2)
+       «作者：张伟»
+  [2] name='AutoShape 4' pos=(4.9,4.9) size=(3.6x0.2)
+       «阿里巴巴网络技术有限公司»
+  [3] name='Connector 5' LINE (无文字)
+  [4] name='Connector 6' LINE (无文字)
+  [5] name='Connector 7' LINE (无文字)
+  [6] name='Connector 8' LINE (无文字)
+  [7] name='AutoShape 9' pos=(5.0,5.3) size=(3.5x0.2)
+       «2026-07»
+  [8] name='Freeform 10' FREEFORM (无文字)
+  [9] name='AutoShape 11' AUTO_SHAPE (无文字)
+  [10] name='AutoShape 12' pos=(3.5,2.7) size=(1.8x0.8)
+       «谢»
+  [11] name='Freeform 13' FREEFORM (无文字)
+  [12] name='AutoShape 14' AUTO_SHAPE (无文字)
+  [13] name='AutoShape 15' pos=(5.0,2.7) size=(1.8x0.8)
+       «谢»
+  [14] name='Freeform 16' FREEFORM (无文字)
+  [15] name='AutoShape 17' AUTO_SHAPE (无文字)
+  [16] name='AutoShape 18' pos=(6.3,2.7) size=(1.8x0.8)
+       «观»
+  [17] name='Freeform 19' FREEFORM (无文字)
+  [18] name='AutoShape 20' AUTO_SHAPE (无文字)
+  [19] name='AutoShape 21' pos=(7.8,2.7) size=(1.8x0.8)
+       «赏»
+  [20] name='Picture 22' PICTURE (无文字)

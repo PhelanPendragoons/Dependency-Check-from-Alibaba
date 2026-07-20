@@ -22,6 +22,17 @@ if not defined NVD_API_KEY (
 :: 关闭自动更新后扫描完全离线，不依赖 VPN / NVD API / 镜像服务
 set NVD_AUTO_UPDATE=false
 
+:: 7/20 修复：启动本地 NVD 镜像 HTTP 服务器（引擎通过 datafeed channel 读取缓存）
+:: 缺少此项时扫描会在初始化阶段同秒失败（NVD 数据无法访问）
+echo [0/3] 启动 NVD 本地镜像服务 (:8888) ...
+if exist dependency-check-web\data\nvd-mirror\cache.properties (
+    start "NVD-Mirror" cmd /c "cd /d %~dp0dependency-check-web\data\nvd-mirror && python -m http.server 8888 --bind 127.0.0.1"
+    set NVD_DATAFEED_URL=http://127.0.0.1:8888/nvdcve-2.0-{0}.json.gz
+    echo NVD 镜像服务已启动
+) else (
+    echo [警告] NVD 镜像目录不存在，请先运行 nvd-warmup.bat 预热缓存
+)
+
 if not exist "%JAR%" (
     echo [错误] JAR 包不存在，正在构建...
     cd dependency-check-web
@@ -34,13 +45,13 @@ if not exist "%JAR%" (
     )
 )
 
-echo [1/2] 启动后端服务 (:8080) ...
+echo [1/3] 启动后端服务 (:8080) ...
 start "Backend" "%JAVA%" -jar "%JAR%"
 echo 后端启动中，等待 20 秒...
 
 timeout /t 20 /nobreak >nul
 
-echo [2/2] 启动前端服务 (:3000) ...
+echo [2/3] 启动前端服务 (:3000) ...
 cd dependency-check-web\frontend
 start "Frontend" cmd /c "npm run dev"
 cd ..\..

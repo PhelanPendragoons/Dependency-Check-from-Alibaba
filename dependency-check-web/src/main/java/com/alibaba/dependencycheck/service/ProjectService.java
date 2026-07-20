@@ -147,10 +147,19 @@ public class ProjectService {
             throw new BusinessException("文件名不能为空");
         }
 
+        // 7/20：先清理已逻辑删除的同名项目，释放唯一索引占用
+        // 逻辑删除只设 deleted=1，唯一索引 CONSTRAINT_INDEX_1 ON project(name) 仍
+        // 包含这些行，直接插入同名新记录会抛 DuplicateKeyException
+        int cleaned = projectMapper.physicalDeleteLogicDeletedByName(name);
+
         // B4-08: 检查项目名是否重复
         Project existing = projectMapper.findByName(name);
         if (existing != null) {
             throw new BusinessException("项目名已存在: " + name);
+        }
+
+        if (cleaned > 0) {
+            log.info("已清理 {} 条同名逻辑删除记录: {}", cleaned, name);
         }
 
         // 3. 创建项目目录
